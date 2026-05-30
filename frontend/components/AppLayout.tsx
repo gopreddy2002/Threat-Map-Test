@@ -1,0 +1,206 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import AnimatedBackground from "./AnimatedBackground";
+
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const pathname = usePathname();
+  const [alerts, setAlerts] = React.useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = React.useState(false);
+
+  React.useEffect(() => {
+    // We import api dynamically or use the global api if it was imported. 
+    // Wait, let's import it at the top of the file!
+    import("@/lib/api").then(({ api }) => {
+      api.getDashboardStats().then((stats) => {
+        setAlerts(stats.alerts);
+      }).catch(err => console.error(err));
+    });
+  }, [pathname]);
+
+  const navigation = [
+    {
+      name: "IOC Scanner",
+      href: "/",
+      icon: <span className="material-symbols-outlined text-[20px]">biotech</span>,
+    },
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <span className="material-symbols-outlined text-[20px]">analytics</span>,
+    },
+    {
+      name: "Watchlist & Alerts",
+      href: "/watchlist",
+      icon: <span className="material-symbols-outlined text-[20px]">visibility</span>,
+    },
+    {
+      name: "Threat Actors",
+      href: "/threat-actors",
+      icon: <span className="material-symbols-outlined text-[20px]">groups</span>,
+    },
+    {
+      name: "Campaigns",
+      href: "/campaigns",
+      icon: <span className="material-symbols-outlined text-[20px]">target</span>,
+    },
+    {
+      name: "Compare IOCs",
+      href: "/compare",
+      icon: <span className="material-symbols-outlined text-[20px]">compare_arrows</span>,
+    },
+    {
+      name: "Bulk Analytics",
+      href: "/results/bulk",
+      icon: <span className="material-symbols-outlined text-[20px]">table_chart</span>,
+    },
+  ];
+
+  return (
+    <div className="flex min-h-screen bg-transparent text-on-background font-body-md text-body-md overflow-x-hidden relative">
+      <AnimatedBackground />
+      {/* Sidebar Navigation */}
+      <aside className="w-64 shrink-0 bg-surface border-r border-white/5 flex flex-col justify-between p-md z-20">
+        <div>
+          {/* Brand/Logo */}
+          <div className="flex items-center gap-2 mb-8 px-2">
+            <span className="material-symbols-outlined text-primary text-[28px] animate-pulse">
+              shield_lock
+            </span>
+            <span className="text-lg font-black tracking-widest text-white font-headline-lg">
+              THREAT<span className="text-primary font-light">MAP</span>
+            </span>
+          </div>
+
+          {/* Navigation links */}
+          <nav className="space-y-1.5">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  prefetch={true}
+                  className={`flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-semibold tracking-wide transition-all duration-150 ${
+                    isActive
+                      ? "bg-primary/10 text-primary border-l-2 border-primary"
+                      : "text-on-surface-variant hover:text-on-surface hover:bg-white/5"
+                  }`}
+                >
+                  {item.icon}
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Footer/System Status */}
+        <div className="mt-auto pt-md border-t border-white/5 space-y-2">
+          <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
+            <div className="w-2 h-2 rounded-full bg-[#adc6ff] animate-ping" />
+            <span>DB ENGINE: CONNECTED</span>
+          </div>
+          <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
+            <div className="w-2 h-2 rounded-full bg-[#adc6ff]" />
+            <span>API AGENT: ONLINE</span>
+          </div>
+          <div className="text-[9px] text-on-surface-variant/40 text-center font-mono-sm pt-2">
+            v{process.env.NEXT_PUBLIC_VERSION || "1.0.0"} - ThreatMap
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header Breadcrumbs */}
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-lg shrink-0">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wider font-label-caps uppercase text-on-surface-variant">
+            <Link href="/" className="hover:text-primary">ThreatMap</Link>
+            <span className="text-[10px] text-white/20">/</span>
+            <span className="text-white">
+              {pathname === "/"
+                ? "IOC Scanner"
+                : pathname === "/dashboard"
+                ? "Dashboard Telemetry"
+                : pathname === "/watchlist"
+                ? "Watchlist & Alerts"
+                : pathname.startsWith("/results")
+                ? "Threat Analysis Report"
+                : "Navigation"}
+            </span>
+          </div>
+
+          {/* Top Info Bar & Notifications */}
+          <div className="flex items-center gap-4 relative">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-white/5 rounded text-[10px] font-mono-sm text-on-secondary-container">
+              <span className="material-symbols-outlined text-[12px] text-primary">dns</span>
+              <span>API SERVER: http://localhost:8000</span>
+            </div>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 text-on-surface-variant hover:text-white hover:bg-white/5 rounded-full transition-all"
+              >
+                <span className="material-symbols-outlined text-[20px]">notifications</span>
+                {alerts.length > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full animate-pulse border border-background"></span>
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-surface border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-surface-container-low">
+                    <span className="text-sm font-bold text-white font-headline-sm">Notifications</span>
+                    <span className="text-[10px] bg-error-container/20 text-error px-2 py-0.5 rounded font-mono-sm">
+                      {alerts.length} New
+                    </span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto hide-scrollbar divide-y divide-white/5">
+                    {alerts.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-on-surface-variant font-mono-sm">
+                        No active alerts
+                      </div>
+                    ) : (
+                      alerts.map((alert) => (
+                        <div key={alert.id} className="p-4 hover:bg-white/5 transition-all">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="text-xs font-bold text-white">{alert.title}</span>
+                            <span className="text-[9px] text-on-surface-variant font-mono-sm">
+                              {new Date(alert.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-on-surface-variant line-clamp-2">{alert.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="p-2 border-t border-white/5 bg-surface-container-lowest text-center">
+                    <Link href="/dashboard" prefetch={true} onClick={() => setShowNotifications(false)} className="text-[10px] text-primary hover:underline font-mono-sm uppercase tracking-wider">
+                      View Alert Center
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Content Portal */}
+        <main className="flex-1 overflow-y-auto p-lg relative bg-transparent z-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+export default AppLayout;

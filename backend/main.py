@@ -19,12 +19,66 @@ try:
     from core.config import settings
     from models.database import init_db, get_db, Scan, Watchlist, Alert
     from models.schemas import DashboardStats
-    from routers import ip, url, domain, hash, watchlist, export
-    from routers import osint_extra
     print("Core imports OK")
 except Exception as e:
-    print(f"Import error: {e}")
+    print(f"Core import error: {e}")
     traceback.print_exc()
+
+try:
+    from routers import ip
+    print("ip router imported OK")
+except Exception as e:
+    print(f"ip router failed: {e}")
+    traceback.print_exc()
+    ip = None
+
+try:
+    from routers import url
+    print("url router imported OK")
+except Exception as e:
+    print(f"url router failed: {e}")
+    traceback.print_exc()
+    url = None
+
+try:
+    from routers import domain
+    print("domain router imported OK")
+except Exception as e:
+    print(f"domain router failed: {e}")
+    traceback.print_exc()
+    domain = None
+
+try:
+    from routers import hash
+    print("hash router imported OK")
+except Exception as e:
+    print(f"hash router failed: {e}")
+    traceback.print_exc()
+    hash = None
+
+try:
+    from routers import watchlist
+    print("watchlist router imported OK")
+except Exception as e:
+    print(f"watchlist router failed: {e}")
+    traceback.print_exc()
+    watchlist = None
+
+try:
+    from routers import export
+    print("export router imported OK")
+except Exception as e:
+    print(f"export router failed: {e}")
+    traceback.print_exc()
+    export = None
+
+try:
+    from routers import osint_extra
+    print("osint_extra router imported OK")
+except Exception as e:
+    print(f"osint_extra router failed: {e}")
+    traceback.print_exc()
+    osint_extra = None
 
 # Setup logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -128,23 +182,52 @@ async def websocket_live_feed(websocket: WebSocket):
 
 # Health Check (fast in-memory ping, no DB)
 
-# Include Routers
-app.include_router(ip.router, prefix=settings.API_V1_STR)
-app.include_router(url.router, prefix=settings.API_V1_STR)
-app.include_router(domain.router, prefix=settings.API_V1_STR)
-app.include_router(hash.router, prefix=settings.API_V1_STR)
-app.include_router(watchlist.router, prefix=settings.API_V1_STR)
-app.include_router(export.router, prefix=settings.API_V1_STR)
-app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
+# Include Routers ONLY if they imported correctly
+if ip:
+    app.include_router(ip.router, prefix=settings.API_V1_STR)
+if url:
+    app.include_router(url.router, prefix=settings.API_V1_STR)
+if domain:
+    app.include_router(domain.router, prefix=settings.API_V1_STR)
+if hash:
+    app.include_router(hash.router, prefix=settings.API_V1_STR)
+if watchlist:
+    app.include_router(watchlist.router, prefix=settings.API_V1_STR)
+if export:
+    app.include_router(export.router, prefix=settings.API_V1_STR)
+if osint_extra:
+    app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
 
-from routers import threat_actors
-app.include_router(threat_actors.router, prefix=settings.API_V1_STR)
+try:
+    from routers import threat_actors
+    print("threat_actors router imported OK")
+except Exception as e:
+    print(f"threat_actors router failed: {e}")
+    traceback.print_exc()
+    threat_actors = None
 
-from routers import campaigns
-app.include_router(campaigns.router, prefix=settings.API_V1_STR)
+try:
+    from routers import campaigns
+    print("campaigns router imported OK")
+except Exception as e:
+    print(f"campaigns router failed: {e}")
+    traceback.print_exc()
+    campaigns = None
 
-from routers import notes
-app.include_router(notes.router, prefix=settings.API_V1_STR)
+try:
+    from routers import notes
+    print("notes router imported OK")
+except Exception as e:
+    print(f"notes router failed: {e}")
+    traceback.print_exc()
+    notes = None
+
+if threat_actors:
+    app.include_router(threat_actors.router, prefix=settings.API_V1_STR)
+if campaigns:
+    app.include_router(campaigns.router, prefix=settings.API_V1_STR)
+if notes:
+    app.include_router(notes.router, prefix=settings.API_V1_STR)
 
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors

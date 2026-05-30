@@ -1,7 +1,11 @@
 import axios from "axios";
 import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats } from "../types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
+let base = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
+if (base && !base.endsWith('/api/v1')) {
+    base = base.replace(/\/$/, '') + '/api/v1';
+}
+const API_BASE_URL = base;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

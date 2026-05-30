@@ -11,7 +11,10 @@ export const ConnectionBanner: React.FC = () => {
   countdownRef.current = countdown;
 
   useEffect(() => {
-    const BASE = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
+    let BASE = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
+    if (BASE && !BASE.endsWith('/api/v1')) {
+      BASE = BASE.replace(/\/$/, '') + '/api/v1';
+    }
 
     const pingHealth = async (): Promise<boolean> => {
       try {

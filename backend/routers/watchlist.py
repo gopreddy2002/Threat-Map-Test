@@ -3,12 +3,12 @@ import datetime
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.models.database import get_db, Watchlist, Alert, Scan
-from backend.models.schemas import WatchlistResponse, WatchlistCreate, AlertResponse, AlertUpdate
-from backend.services.virustotal import virustotal_service
-from backend.services.abuseipdb import abuse_ipdb_service
-from backend.services.greynoise import greynoise_service
-from backend.services.risk_engine import risk_engine
+from models.database import get_db, Watchlist, Alert, Scan
+from models.schemas import WatchlistResponse, WatchlistCreate, AlertResponse, AlertUpdate
+from services.virustotal import virustotal_service
+from services.abuseipdb import abuse_ipdb_service
+from services.greynoise import greynoise_service
+from services.risk_engine import risk_engine
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/watchlist", tags=["Watchlist & Alerts"])

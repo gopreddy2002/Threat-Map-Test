@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.database import Scan
+from models.database import Scan
 import ipaddress
 
 

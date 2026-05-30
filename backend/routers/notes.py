@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from backend.models.database import get_db, CommunityNote
+from models.database import get_db, CommunityNote
 
 router = APIRouter(prefix="/notes", tags=["Community Notes"])
 

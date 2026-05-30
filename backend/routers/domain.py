@@ -4,15 +4,15 @@ import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.core.cache import cache_service
-from backend.models.database import get_db, Scan
-from backend.models.schemas import ScanResponse, ScanCreate
-from backend.services.virustotal import virustotal_service
-from backend.services.urlscan import urlscan_service
-from backend.services.alienvault import alienvault_service
-from backend.services.osint import osint_service
-from backend.services.risk_engine import risk_engine
-from backend.services.ai_service import ai_service
+from core.cache import cache_service
+from models.database import get_db, Scan
+from models.schemas import ScanResponse, ScanCreate
+from services.virustotal import virustotal_service
+from services.urlscan import urlscan_service
+from services.alienvault import alienvault_service
+from services.osint import osint_service
+from services.risk_engine import risk_engine
+from services.ai_service import ai_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["Domain Analysis"])

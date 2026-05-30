@@ -2,8 +2,8 @@ import logging
 import httpx
 import json
 from typing import Dict, Any
-from backend.core.config import settings
-from backend.core.cache import cache_service
+from core.config import settings
+from core.cache import cache_service
 
 logger = logging.getLogger(__name__)
 

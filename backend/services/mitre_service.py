@@ -1,7 +1,7 @@
 import httpx
 import logging
 from sqlalchemy.orm import Session
-from backend.models.database import ThreatActor
+from models.database import ThreatActor
 import datetime
 
 logger = logging.getLogger(__name__)

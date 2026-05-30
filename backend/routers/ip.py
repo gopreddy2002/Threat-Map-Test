@@ -4,17 +4,17 @@ import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.core.config import settings
-from backend.core.cache import cache_service
-from backend.models.database import get_db, Scan
-from backend.models.schemas import ScanResponse, ScanCreate
-from backend.services.virustotal import virustotal_service
-from backend.services.abuseipdb import abuse_ipdb_service
-from backend.services.ipinfo import ipinfo_service
-from backend.services.greynoise import greynoise_service
-from backend.services.alienvault import alienvault_service
-from backend.services.risk_engine import risk_engine
-from backend.services.ai_service import ai_service
+from core.config import settings
+from core.cache import cache_service
+from models.database import get_db, Scan
+from models.schemas import ScanResponse, ScanCreate
+from services.virustotal import virustotal_service
+from services.abuseipdb import abuse_ipdb_service
+from services.ipinfo import ipinfo_service
+from services.greynoise import greynoise_service
+from services.alienvault import alienvault_service
+from services.risk_engine import risk_engine
+from services.ai_service import ai_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["IP Analysis"])

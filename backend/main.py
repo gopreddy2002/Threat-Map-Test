@@ -1,7 +1,12 @@
+import sys
 import os
 import logging
 import datetime
 import traceback
+
+print("Python version:", sys.version)
+print("Starting main.py...")
+
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,11 +15,16 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
-from backend.core.config import settings
-from backend.models.database import init_db, get_db, Scan, Watchlist, Alert
-from backend.models.schemas import DashboardStats
-from backend.routers import ip, url, domain, hash, watchlist, export
-from backend.routers import osint_extra
+try:
+    from core.config import settings
+    from models.database import init_db, get_db, Scan, Watchlist, Alert
+    from models.schemas import DashboardStats
+    from routers import ip, url, domain, hash, watchlist, export
+    from routers import osint_extra
+    print("Core imports OK")
+except Exception as e:
+    print(f"Import error: {e}")
+    traceback.print_exc()
 
 # Setup logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -24,10 +34,11 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
+    title=settings.PROJECT_NAME if 'settings' in locals() else "ThreatMap API",
+    version=settings.VERSION if 'settings' in locals() else "1.0",
     description="ThreatMap OSINT Intelligence Aggregation Core Engine"
 )
+print("FastAPI app created OK")
 
 # Register Limiter
 app.state.limiter = limiter
@@ -126,18 +137,18 @@ app.include_router(watchlist.router, prefix=settings.API_V1_STR)
 app.include_router(export.router, prefix=settings.API_V1_STR)
 app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
 
-from backend.routers import threat_actors
+from routers import threat_actors
 app.include_router(threat_actors.router, prefix=settings.API_V1_STR)
 
-from backend.routers import campaigns
+from routers import campaigns
 app.include_router(campaigns.router, prefix=settings.API_V1_STR)
 
-from backend.routers import notes
+from routers import notes
 app.include_router(notes.router, prefix=settings.API_V1_STR)
 
-from backend.models.schemas import ScanResponse
-from backend.services.threat_intel import find_linked_actors
-from backend.services.correlation import get_correlated_iocs
+from models.schemas import ScanResponse
+from services.threat_intel import find_linked_actors
+from services.correlation import get_correlated_iocs
 from fastapi import HTTPException
 
 @app.get(f"{settings.API_V1_STR}/health", tags=["System"])
@@ -188,7 +199,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     """
     # Redis caching
     cache_key = "dashboard_stats"
-    from backend.core.cache import cache_service
+    from core.cache import cache_service
     import json
     
     cached = cache_service.get(cache_key)

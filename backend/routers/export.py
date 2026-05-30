@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from backend.models.database import get_db, Scan
+from models.database import get_db, Scan
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from backend.models.database import get_db, ThreatActor
-from backend.services.mitre_service import sync_threat_actors
+from models.database import get_db, ThreatActor
+from services.mitre_service import sync_threat_actors
 from pydantic import BaseModel
 import datetime
 

@@ -379,8 +379,8 @@ async def bulk_scan(payload: BulkScanRequest):
     Quickly assess risk level of up to 20 indicators using VirusTotal.
     Returns a sorted table of results by risk score.
     """
-    from backend.services.virustotal import virustotal_service
-    from backend.services.risk_engine import risk_engine
+    from services.virustotal import virustotal_service
+    from services.risk_engine import risk_engine
 
     indicators = payload.indicators[:20]  # Hard cap
 

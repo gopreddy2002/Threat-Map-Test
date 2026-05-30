@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.database import ThreatActor
+from models.database import ThreatActor
 
 def find_linked_actors(scan_data: dict, db: Session):
     """

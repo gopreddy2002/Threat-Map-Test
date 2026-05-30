@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from backend.models.database import get_db, Campaign, CampaignIOC, Scan
+from models.database import get_db, Campaign, CampaignIOC, Scan
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 

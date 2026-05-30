@@ -2,7 +2,7 @@ import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from backend.core.config import settings
+from core.config import settings
 
 # Handle schema prefixes if Supabase is used, fallback to sqlite locally
 if "sqlite" in settings.DATABASE_URL:

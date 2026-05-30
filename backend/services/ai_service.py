@@ -4,7 +4,7 @@ import logging
 import re
 import google.generativeai as genai
 from typing import Dict, Any
-from backend.core.config import settings
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 

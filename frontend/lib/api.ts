@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats } from "../types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -214,14 +214,8 @@ export const api = {
     return response.data;
   },
 
-  // STIX Export
-  exportStix: async (scanId: string) => {
-    const response = await apiClient.get(`/export/stix/${scanId}`);
-    return response.data;
-  },
-
   // Health check
-  getApiHealth: async () => {
+  healthCheck: async () => {
     const response = await apiClient.get(`/health`);
     return response.data;
   },

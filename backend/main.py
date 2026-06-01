@@ -292,72 +292,85 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         except Exception:
             pass
 
-    now = datetime.datetime.utcnow()
-    past_24h = now - datetime.timedelta(hours=24)
-
-    # 1. Scans count in past 24 hours
-    scans_count = db.query(Scan).filter(Scan.created_at >= past_24h).count()
-
-    # Combine queries 2, 3, 7 into a single aggregation query
-    from sqlalchemy import func
-    risk_counts = dict(db.query(Scan.risk_level, func.count(Scan.id)).group_by(Scan.risk_level).all())
-    
-    critical_count = risk_counts.get("CRITICAL", 0)
-    high_risk_count = risk_counts.get("HIGH", 0)
-    medium_risk_count = risk_counts.get("MEDIUM", 0)
-    low_risk_count = risk_counts.get("LOW", 0)
-    
-    total_all_scans = sum(risk_counts.values())
-    
-    if scans_count == 0 and total_all_scans > 0:
-        scans_count = total_all_scans
-
-    # 4. Monitored IOCs (Watchlist size)
-    watchlist_count = db.query(Watchlist).count()
-
-    # 5. Recent scans
-    recent_scans = db.query(Scan).order_by(Scan.created_at.desc()).limit(10).all()
-
-    # 6. Active alerts
-    active_alerts = db.query(Alert).filter(Alert.is_dismissed == False).order_by(Alert.created_at.desc()).limit(10).all()
-
-    # 7. Threat distribution percentages
-    dist = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    if total_all_scans > 0:
-        dist = {
-            "critical": int((critical_count / total_all_scans) * 100),
-            "high": int((high_risk_count / total_all_scans) * 100),
-            "medium": int((medium_risk_count / total_all_scans) * 100),
-            "low": int((low_risk_count / total_all_scans) * 100)
-        }
-    else:
-        dist = {"critical": 25, "high": 35, "medium": 30, "low": 10}
-
-    # 8. Malware prevalence ranking
-    malware_prevalence = [
-        {"name": "Ransom.LockBit", "percentage": 82, "trend": "up"},
-        {"name": "Emotet.Botnet", "percentage": 65, "trend": "down"},
-        {"name": "AgentTesla.Spy", "percentage": 48, "trend": "up"}
-    ]
-
-    stats = DashboardStats(
-        total_scans_24h=scans_count,
-        critical_threats=critical_count,
-        high_risk_assets=high_risk_count,
-        monitored_iocs=watchlist_count,
-        recent_scans=recent_scans,
-        alerts=active_alerts,
-        threat_distribution=dist,
-        malware_prevalence=malware_prevalence
-    )
-
     try:
-        # cache for 60 seconds
-        cache_service.set(cache_key, stats.json(), expire=60)
-    except Exception:
-        pass
+        now = datetime.datetime.utcnow()
+        past_24h = now - datetime.timedelta(hours=24)
+
+        # 1. Scans count in past 24 hours
+        scans_count = db.query(Scan).filter(Scan.created_at >= past_24h).count()
+
+        # Combine queries 2, 3, 7 into a single aggregation query
+        from sqlalchemy import func
+        risk_counts = dict(db.query(Scan.risk_level, func.count(Scan.id)).group_by(Scan.risk_level).all())
         
-    return stats
+        critical_count = risk_counts.get("CRITICAL", 0)
+        high_risk_count = risk_counts.get("HIGH", 0)
+        medium_risk_count = risk_counts.get("MEDIUM", 0)
+        low_risk_count = risk_counts.get("LOW", 0)
+        
+        total_all_scans = sum(risk_counts.values())
+        
+        if scans_count == 0 and total_all_scans > 0:
+            scans_count = total_all_scans
+
+        # 4. Monitored IOCs (Watchlist size)
+        watchlist_count = db.query(Watchlist).count()
+
+        # 5. Recent scans
+        recent_scans = db.query(Scan).order_by(Scan.created_at.desc()).limit(10).all()
+
+        # 6. Active alerts
+        active_alerts = db.query(Alert).filter(Alert.is_dismissed == False).order_by(Alert.created_at.desc()).limit(10).all()
+
+        # 7. Threat distribution percentages
+        dist = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        if total_all_scans > 0:
+            dist = {
+                "critical": int((critical_count / total_all_scans) * 100),
+                "high": int((high_risk_count / total_all_scans) * 100),
+                "medium": int((medium_risk_count / total_all_scans) * 100),
+                "low": int((low_risk_count / total_all_scans) * 100)
+            }
+        else:
+            dist = {"critical": 25, "high": 35, "medium": 30, "low": 10}
+
+        # 8. Malware prevalence ranking
+        malware_prevalence = [
+            {"name": "Ransom.LockBit", "percentage": 82, "trend": "up"},
+            {"name": "Emotet.Botnet", "percentage": 65, "trend": "down"},
+            {"name": "AgentTesla.Spy", "percentage": 48, "trend": "up"}
+        ]
+
+        stats = DashboardStats(
+            total_scans_24h=scans_count,
+            critical_threats=critical_count,
+            high_risk_assets=high_risk_count,
+            monitored_iocs=watchlist_count,
+            recent_scans=recent_scans,
+            alerts=active_alerts,
+            threat_distribution=dist,
+            malware_prevalence=malware_prevalence
+        )
+
+        try:
+            # cache for 60 seconds
+            cache_service.set(cache_key, stats.json(), expire=60)
+        except Exception:
+            pass
+            
+        return stats
+    except Exception as e:
+        logger.error(f"Dashboard Telemetry error: {e}")
+        return DashboardStats(
+            total_scans_24h=0,
+            critical_threats=0,
+            high_risk_assets=0,
+            monitored_iocs=0,
+            recent_scans=[],
+            alerts=[],
+            threat_distribution={"critical": 0, "high": 0, "medium": 0, "low": 0},
+            malware_prevalence=[]
+        )
 
 
 @app.get(f"{settings.API_V1_STR}/dashboard/activity", tags=["Telemetry"])

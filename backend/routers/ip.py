@@ -60,10 +60,11 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
             )
 
             # Handle potential exceptions during parallel queries
-            vt_res = vt_res if not isinstance(vt_res, Exception) else virustotal_service._get_fallback_data()
-            abuse_res = abuse_res if not isinstance(abuse_res, Exception) else abuse_ipdb_service._get_fallback_data(ip)
-            gn_res = gn_res if not isinstance(gn_res, Exception) else greynoise_service._get_fallback_data(ip)
-            otx_res = otx_res if not isinstance(otx_res, Exception) else alienvault_service._get_fallback_data(ip)
+            vt_res = vt_res if isinstance(vt_res, dict) else virustotal_service._get_fallback_data()
+            abuse_res = abuse_res if isinstance(abuse_res, dict) else abuse_ipdb_service._get_fallback_data(ip)
+            ipinfo_res = ipinfo_res if isinstance(ipinfo_res, dict) else ipinfo_service._get_fallback_data(ip)
+            gn_res = gn_res if isinstance(gn_res, dict) else greynoise_service._get_fallback_data(ip)
+            otx_res = otx_res if isinstance(otx_res, dict) else alienvault_service._get_fallback_data(ip)
 
             logger.info(f"IPinfo for {ip}: {ipinfo_res.get('city')}, {ipinfo_res.get('country')} (status={ipinfo_res.get('status')})") 
 

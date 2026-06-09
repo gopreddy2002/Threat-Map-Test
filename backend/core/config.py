@@ -15,19 +15,19 @@ class Settings(BaseSettings):
     
     # Redis Cache (Upstash)
     REDIS_URL: str = Field(
-        default="redis://default:gQAAAAAAAZdnAAIgcDI0YjFiMjBhNmY3ZTA0MzU0YjI4NDc2OTRlOGRmNGJhNQ@flexible-urchin-104295.upstash.io:6379",
+        default="your url",
         description="Redis connection URL"
     )
-    UPSTASH_REDIS_REST_URL: str = "https://flexible-urchin-104295.upstash.io"
-    UPSTASH_REDIS_REST_TOKEN: str = "gQAAAAAAAZdnAAIgcDI0YjFiMjBhNmY3ZTA0MzU0YjI4NDc2OTRlOGRmNGJhNQ"
+    UPSTASH_REDIS_REST_URL: str = "your_url
+    UPSTASH_REDIS_REST_TOKEN: str = "your_link"
     
     # Security API Keys (Defaulted to the provided keys for zero-setup ease of evaluation)
-    VIRUSTOTAL_API_KEY: str = "d8f0279993bb4163ff5e20bccfbe3cf0b4d3f8769dc286a778703b20faf854e2"
-    ABUSEIPDB_API_KEY: str = "d9ddd3f0286d8d7d90082b7f1e2c755c49543ec8d41b7b6486cafc7ebc51238cdfa2bc81673b0775"
-    IPINFO_API_TOKEN: str = "b7adf89768147c"
-    GEMINI_API_KEY: str = "AIzaSyDN7iQc6wp7kReDUaToNDIF5lRRpEIeu5E"
-    ALIENVAULT_API_KEY: str = "85a8bcfbf49f8919169c3ab8a745904c48e715ebd74f9613a02a64c1d59aa8d8"
-    URLSCAN_API_KEY: str = "019e68c2-286a-72fa-b744-5c65412374bd"
+    VIRUSTOTAL_API_KEY: str = "YOUR_API_KEY"
+    ABUSEIPDB_API_KEY: str = "YOUR_API_KEY"
+    IPINFO_API_TOKEN: str = "YOUR_API_KEY"
+    GEMINI_API_KEY: str = "YOUR_API_KEY"
+    ALIENVAULT_API_KEY: str = "YOUR_API_KEY"
+    URLSCAN_API_KEY: str = "YOUR_API_KEY"
     
     # GreyNoise community API headers default
     GREYNOISE_API_KEY: str = "TreatMap"

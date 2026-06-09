@@ -21,9 +21,9 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
 }) => {
   return (
     <motion.div 
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      initial={{ y: 20, opacity: 0, scale: 0.98 }}
+      animate={{ y: 0, opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className="glass-panel p-md rounded-xl flex flex-col justify-between hover:border-white/20 transition-all duration-300"
     >
       <div>

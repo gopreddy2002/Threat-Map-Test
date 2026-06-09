@@ -21,7 +21,8 @@ class URLScanService:
             logger.warning("URLScan API key missing or invalid. Returning fallback data.")
             return self._get_fallback_data(indicator)
 
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
             try:
                 response = await client.get(url, params=params)
                 if response.status_code == 200:

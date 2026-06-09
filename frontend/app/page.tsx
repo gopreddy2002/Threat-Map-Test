@@ -2,14 +2,44 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
 import ScanInput from "@/components/ScanInput";
 import ScanSequence from "@/components/ScanSequence";
 import { api } from "@/lib/api";
 
 export default function Home() {
   const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
   const [isLoading, setIsLoading] = useState(false);
   const [scanError, setScanError] = useState("");
+
+  const titleWords = "AI-Powered Threat Intelligence".split(" ");
+  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+    },
+  };
+  
+  const wordVariants = {
+    hidden: { opacity: 0, y: 30, filter: "blur(4px)" },
+    visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring", damping: 12, stiffness: 100 } },
+  };
+  
+  const cardContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08, delayChildren: 0.5 },
+    },
+  };
+  
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } },
+  };
 
   const handleScan = async (indicator: string, type: "ip" | "url" | "domain" | "hash" | "bulk" | "cve") => {
     setIsLoading(true);
@@ -101,9 +131,18 @@ export default function Home() {
             radar
           </span>
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-4 font-headline-lg">
-          AI-Powered Threat Intelligence
-        </h1>
+        <motion.h1 
+          className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-4 font-headline-lg flex justify-center flex-wrap gap-x-3"
+          variants={containerVariants}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate="visible"
+        >
+          {titleWords.map((word, i) => (
+            <motion.span key={i} variants={wordVariants} className="inline-block">
+              {word}
+            </motion.span>
+          ))}
+        </motion.h1>
         <p className="text-base text-on-surface-variant max-w-2xl mx-auto font-body-lg leading-relaxed">
           Aggregates IP geolocation, malicious binary signals, domain DNS mapping, and URL scan screenshots
           into a single, consolidated threat score supported by automated Google Gemini mitigation reports.
@@ -127,11 +166,18 @@ export default function Home() {
         <h3 className="text-center font-bold font-label-caps text-label-caps text-[12px] text-on-surface-variant uppercase tracking-widest mb-6">
           Aggregated OSINT Partners & Feeds
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          variants={cardContainerVariants}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate="visible"
+        >
           {platforms.map((p) => (
-            <div
+            <motion.div
               key={p.name}
-              className="glass-panel p-md rounded-xl hover:border-white/20 transition-all duration-300 flex items-start gap-4"
+              variants={cardVariants}
+              whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(255,255,255,0.1)" }}
+              className="glass-panel p-md rounded-xl border border-white/5 transition-colors duration-300 flex items-start gap-4 cursor-default"
             >
               <div className="p-2.5 rounded-lg bg-surface-container-low border border-white/5 flex items-center justify-center">
                 <span className="material-symbols-outlined text-primary text-[22px]">
@@ -149,9 +195,9 @@ export default function Home() {
                   {p.description}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

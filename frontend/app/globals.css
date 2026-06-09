@@ -8,9 +8,26 @@
 }
 
 body {
-  background-color: #020617;
+  background: linear-gradient(135deg, #030712, #0a1628, #030712);
+  background-size: 200% 200%;
+  animation: bg-pan 12s ease-in-out infinite;
   color: #dae2fd;
   font-family: 'Inter', sans-serif;
+}
+
+@keyframes bg-pan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes scan-breathing {
+  0%, 100% { box-shadow: 0 0 0px rgba(20, 184, 166, 0); }
+  50% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.3); }
+}
+
+.scan-pulse-idle {
+  animation: scan-breathing 4s ease-in-out infinite;
 }
 
 /* Glassmorphism Panel styles */

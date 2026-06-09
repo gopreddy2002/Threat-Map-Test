@@ -221,7 +221,7 @@ async def enumerate_subdomains(domain: str):
 async def get_asn_info(ip: str):
     """Return full ASN details for an IP using ipinfo.io free endpoint."""
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(f"https://ipinfo.io/{ip}/json")
             if response.status_code == 200:
                 data = response.json()
@@ -257,7 +257,7 @@ async def email_breach_check(email: str):
     """
     try:
         # Public breach list — no key needed
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             # Check against public HIBP breach name list (this endpoint is free)
             headers = {"User-Agent": "ThreatMap-IOC-Scanner"}
             response = await client.get(

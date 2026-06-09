@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import AnimatedBackground from "./AnimatedBackground";
 
 interface AppLayoutProps {
@@ -29,6 +30,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       name: "IOC Scanner",
       href: "/",
       icon: <span className="material-symbols-outlined text-[20px]">biotech</span>,
+    },
+    {
+      name: "Deep OSINT",
+      href: "/deep-scan",
+      icon: <span className="material-symbols-outlined text-[20px]">troubleshoot</span>,
     },
     {
       name: "Dashboard",
@@ -60,6 +66,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       href: "/results/bulk",
       icon: <span className="material-symbols-outlined text-[20px]">table_chart</span>,
     },
+    {
+      name: "About",
+      href: "/about",
+      icon: <span className="material-symbols-outlined text-[20px]">info</span>,
+    },
   ];
 
   return (
@@ -87,14 +98,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   key={item.name}
                   href={item.href}
                   prefetch={true}
-                  className={`flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-semibold tracking-wide transition-all duration-150 ${
+                  className={`relative flex items-center px-4 py-3 rounded-lg text-sm font-semibold tracking-wide transition-colors duration-150 ${
                     isActive
-                      ? "bg-primary/10 text-primary border-l-2 border-primary"
+                      ? "text-primary"
                       : "text-on-surface-variant hover:text-on-surface hover:bg-white/5"
                   }`}
                 >
-                  {item.icon}
-                  {item.name}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute inset-0 bg-primary/10 border-l-2 border-primary rounded-lg"
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                    />
+                  )}
+                  <motion.div 
+                    className="flex items-center gap-3.5 relative z-10 w-full"
+                    whileHover={{ x: isActive ? 0 : 4 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </motion.div>
                 </Link>
               );
             })}
@@ -131,6 +156,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 ? "Dashboard Telemetry"
                 : pathname === "/watchlist"
                 ? "Watchlist & Alerts"
+                : pathname === "/about"
+                ? "About ThreatMap"
                 : pathname.startsWith("/results")
                 ? "Threat Analysis Report"
                 : "Navigation"}
@@ -197,7 +224,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* Content Portal */}
         <main className="flex-1 overflow-y-auto p-lg relative bg-transparent z-10">
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

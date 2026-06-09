@@ -1,6 +1,6 @@
 import httpx, asyncio
 async def test():
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         for ind, typ in [('google.com','domain'), ('8.8.8.8','ip'), ('mccmulund.ac.in','domain'), ('http://malware.wicar.org/data/eicar.com','url')]:
             res = await client.get(f'http://localhost:8000/api/v1/scan?indicator={ind}&type={typ}')
             data = res.json()

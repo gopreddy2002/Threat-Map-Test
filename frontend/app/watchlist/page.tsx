@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { WatchlistResponse } from "@/types";
 import RiskBadge from "@/components/RiskBadge";
 import { Eye, RefreshCw, Trash2, ArrowRight, Notebook } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -127,19 +128,26 @@ export default function WatchlistPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {watchlist.map((item) => {
-            // Determine risk level category strictly from score
-            let level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" = "LOW";
-            if (item.last_risk_score >= 90) level = "CRITICAL";
-            else if (item.last_risk_score >= 70) level = "HIGH";
-            else if (item.last_risk_score >= 35) level = "MEDIUM";
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence mode="popLayout">
+            {watchlist.map((item) => {
+              // Determine risk level category strictly from score
+              let level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" = "LOW";
+              if (item.last_risk_score >= 90) level = "CRITICAL";
+              else if (item.last_risk_score >= 70) level = "HIGH";
+              else if (item.last_risk_score >= 35) level = "MEDIUM";
 
-            return (
-              <div
-                key={item.id}
-                className="glass-panel p-md rounded-xl flex flex-col justify-between hover:border-white/20 transition-all duration-300 min-h-[190px]"
-              >
+              return (
+                <motion.div
+                  layout
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.8, filter: "blur(5px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, scale: 0.8, filter: "blur(5px)", transition: { duration: 0.2 } }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  whileHover={{ y: -5, boxShadow: "0 15px 30px -10px rgba(0,0,0,0.5)" }}
+                  className="glass-panel p-md rounded-xl flex flex-col justify-between hover:border-white/20 transition-colors duration-300 min-h-[190px]"
+                >
                 {/* Top Info */}
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -199,10 +207,11 @@ export default function WatchlistPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );

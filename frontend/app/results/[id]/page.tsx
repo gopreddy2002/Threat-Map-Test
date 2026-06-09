@@ -10,6 +10,7 @@ import DetectionCard from "@/components/DetectionCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import AdvancedOsintPanels from "@/components/AdvancedOsintPanels";
 import WebVulnReport from "@/components/WebVulnReport";
+import SpiderfootPanel from "@/components/SpiderfootPanel";
 import CommunityNotes from "@/components/CommunityNotes";
 import dynamic from "next/dynamic";
 import { Download, Plus, Check, Share2, Target, FileCode2, AlertTriangle, X } from "lucide-react";
@@ -199,13 +200,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
 
       {/* ── Plain English Summary Card ─────────────────────────── */}
-      <div className={`rounded-xl border p-4 flex items-start gap-4 ${plainEnglish.color}`}>
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className={`rounded-xl border p-4 flex items-start gap-4 ${plainEnglish.color}`}
+      >
         <span className="text-3xl leading-none mt-0.5">{plainEnglish.emoji}</span>
         <div>
           <h3 className={`font-bold text-base mb-1 ${plainEnglish.titleColor}`}>{plainEnglish.title}</h3>
           <p className="text-sm text-on-surface/90 leading-relaxed">{plainEnglish.text}</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── LINKED TO THREAT ACTOR Alert ──────────────────────────── */}
       {scan.linked_actors && scan.linked_actors.length > 0 && (
@@ -636,6 +642,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       {/* Advanced Live OSINT Telemetry */}
       <AdvancedOsintPanels scan={scan} />
 
+      {/* SpiderFoot Deep OSINT Section */}
+      <SpiderfootPanel target={scan.indicator} />
+
       {/* ── Web Security Audit ───────────────────────────── */}
       {webVulnData && (scan.type === "domain" || scan.type === "url") && (
         <div className="mt-8">
@@ -681,19 +690,45 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
         {!hasMitreTactics ? (
           <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-6 rounded-xl flex flex-col items-center justify-center space-y-2 text-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-            <span className="material-symbols-outlined text-[32px]">check_circle</span>
+            <motion.svg 
+              initial={{ pathLength: 0 }} 
+              animate={{ pathLength: 1 }} 
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="w-10 h-10 text-emerald-400 mb-1"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </motion.svg>
             <h4 className="font-bold font-headline-sm text-lg">ALL CLEAR</h4>
             <p className="text-xs max-w-sm opacity-80">No known hacker tactics or techniques were detected from this indicator during our scan.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <motion.div 
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            }}
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+          >
             {mitreTactics.map((t) => (
-              <div
+              <motion.div
                 key={t.id}
+                variants={{
+                  hidden: { scale: 0.8, opacity: 0 },
+                  show: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 200 } }
+                }}
+                whileHover={t.active ? { scale: 1.05, boxShadow: "0 0 25px rgba(239,68,68,0.6)" } : {}}
                 title={t.desc}
-                className={`p-3 rounded-lg border flex flex-col justify-between min-h-[90px] transition-all duration-300 cursor-help ${
+                className={`p-3 rounded-lg border flex flex-col justify-between min-h-[90px] transition-colors duration-300 cursor-help ${
                   t.active
-                    ? "bg-[#93000a]/20 text-[#ffb4ab] border-[#ffb4ab]/40 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                    ? "bg-[#93000a]/20 text-[#ffb4ab] border-[#ffb4ab]/40 shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                     : "bg-surface-container-low text-on-surface-variant/40 border-white/5 opacity-50"
                 }`}
               >
@@ -706,9 +741,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                     {t.technique}
                   </span>
                 )}
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 

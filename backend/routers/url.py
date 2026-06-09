@@ -37,7 +37,7 @@ async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
 
         # 2. Parallel queries
         try:
-            vt_task = asyncio.wait_for(virustotal_service.get_url_report(target_url), timeout=8.0)
+            vt_task = asyncio.wait_for(virustotal_service.get_url_report(target_url), timeout=30.0)
             urlscan_task = asyncio.wait_for(urlscan_service.search_indicator(target_url, "url"), timeout=8.0)
             otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(target_url, "url"), timeout=8.0)
 

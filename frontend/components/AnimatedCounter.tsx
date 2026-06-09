@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import React, { useEffect } from "react";
+import { motion, useSpring, useTransform } from "framer-motion";
 
 interface AnimatedCounterProps {
   value: number;
@@ -7,31 +7,14 @@ interface AnimatedCounterProps {
 }
 
 export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({ value, className }) => {
-  const [displayValue, setDisplayValue] = useState(0);
+  const spring = useSpring(0, { bounce: 0, duration: 1500 });
+  const display = useTransform(spring, (current) => Math.round(current).toLocaleString());
 
   useEffect(() => {
-    let start = 0;
-    const end = value;
-    if (start === end) {
-      setDisplayValue(end);
-      return;
-    }
-    const duration = 1000;
-    const incrementTime = Math.max(duration / end, 10);
+    spring.set(value);
+  }, [spring, value]);
 
-    const timer = setInterval(() => {
-      start += 1;
-      setDisplayValue(start);
-      if (start >= end) {
-        setDisplayValue(end);
-        clearInterval(timer);
-      }
-    }, incrementTime);
-
-    return () => clearInterval(timer);
-  }, [value]);
-
-  return <motion.span className={className}>{displayValue}</motion.span>;
+  return <motion.span className={className}>{display}</motion.span>;
 };
 
 export default AnimatedCounter;

@@ -12,7 +12,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // 60 seconds timeout to accommodate full parallel OSINT checks
+  timeout: 90000, // 90 seconds timeout to accommodate full parallel OSINT checks
 });
 
 export const api = {

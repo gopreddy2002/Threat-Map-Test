@@ -74,7 +74,7 @@ export const RiskGauge: React.FC<RiskGaugeProps> = ({
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
             strokeLinecap="round"
           />
         </svg>

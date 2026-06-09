@@ -98,8 +98,17 @@ export default function ThreatActorsPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {actors.map((actor) => (
-            <motion.div key={actor.id} variants={itemVariants} className="glass-panel p-md rounded-xl hover:border-white/20 transition-all">
-              <div className="flex items-start justify-between mb-4">
+            <motion.div 
+              key={actor.id} 
+              variants={itemVariants} 
+              whileHover={{ y: -8, scale: 1.02, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="glass-panel p-md rounded-xl hover:border-white/20 transition-colors duration-300 relative overflow-hidden group"
+            >
+              {/* Premium Glow effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              
+              <div className="flex items-start justify-between mb-4 relative z-10">
                 <div>
                   <h3 className="font-bold text-white text-lg tracking-wide">{actor.name}</h3>
                   <div className="flex items-center gap-1 text-xs text-on-surface-variant/70 mt-1">
@@ -107,13 +116,17 @@ export default function ThreatActorsPage() {
                     <span>{actor.country || "Unknown Origin"}</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-mono-sm font-bold border ${
-                  actor.threat_level === "CRITICAL" 
-                    ? "bg-[#93000a]/20 text-[#ffb4ab] border-[#ffb4ab]/25 animate-pulse" 
-                    : "bg-[#df7412]/20 text-[#ffb786] border-[#ffb786]/20"
-                }`}>
+                <motion.span 
+                  animate={actor.threat_level === "CRITICAL" ? { boxShadow: ["0 0 0px rgba(255,180,171,0)", "0 0 15px rgba(255,180,171,0.5)", "0 0 0px rgba(255,180,171,0)"] } : {}}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono-sm font-bold border ${
+                    actor.threat_level === "CRITICAL" 
+                      ? "bg-[#93000a]/20 text-[#ffb4ab] border-[#ffb4ab]/25" 
+                      : "bg-[#df7412]/20 text-[#ffb786] border-[#ffb786]/20"
+                  }`}
+                >
                   {actor.threat_level}
-                </span>
+                </motion.span>
               </div>
               
               <div className="space-y-4">

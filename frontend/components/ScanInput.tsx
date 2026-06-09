@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 
 interface ScanInputProps {
   onScan: (indicator: string, type: ScanType) => void;
@@ -103,7 +104,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto glass-panel p-md rounded-xl transition-all duration-300">
+    <div className={`w-full max-w-4xl mx-auto glass-panel p-md rounded-xl transition-all duration-300 ${!isLoading ? 'scan-pulse-idle' : 'border-primary/50 shadow-[0_0_20px_rgba(20,184,166,0.3)]'}`}>
       {/* Tabs */}
       <div className="flex flex-wrap bg-surface-container-low rounded-lg p-1 border border-white/5 mb-4 max-w-3xl mx-auto gap-1 justify-center">
         {(Object.keys(tabConfig) as ScanType[]).map((tab) => (
@@ -156,12 +157,14 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
             />
           )}
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02, boxShadow: "0 0 15px rgba(20, 184, 166, 0.5)" }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading}
-            className={`absolute right-2 top-2 bg-primary text-on-primary font-bold py-2 px-6 rounded-lg text-label-caps font-label-caps text-[12px] hover:opacity-90 active:scale-[0.98] transition-all duration-150 flex items-center gap-2 ${
+            className={`absolute right-2 top-2 bg-primary text-on-primary font-bold py-2 px-6 rounded-lg text-label-caps font-label-caps text-[12px] flex items-center gap-2 ${
               activeTab === "bulk" ? "" : "top-1/2 -translate-y-1/2"
-            }`}
+            } ${isLoading ? "opacity-80" : ""}`}
           >
             {isLoading ? (
               <span className="animate-spin inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full" />
@@ -169,7 +172,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
               <span className="material-symbols-outlined text-[16px]">biotech</span>
             )}
             {isLoading ? "ANALYZING" : "SCAN NOW"}
-          </button>
+          </motion.button>
         </div>
         {error && <p className="text-error text-xs mt-2 px-2 font-mono-sm">{error}</p>}
       </form>

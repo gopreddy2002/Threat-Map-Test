@@ -15,7 +15,8 @@ async def sync_threat_actors(db: Session):
     """
     logger.info("Starting MITRE ATT&CK Threat Actor synchronization...")
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
             response = await client.get(MITRE_URL)
             response.raise_for_status()
             data = response.json()

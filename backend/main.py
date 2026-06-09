@@ -74,11 +74,13 @@ except Exception as e:
 
 try:
     from routers import osint_extra
+    from routers import spiderfoot
     print("osint_extra router imported OK")
 except Exception as e:
     print(f"osint_extra router failed: {e}")
     traceback.print_exc()
     osint_extra = None
+    spiderfoot = None
 
 # Setup logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -197,6 +199,8 @@ if export:
     app.include_router(export.router, prefix=settings.API_V1_STR)
 if osint_extra:
     app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
+if spiderfoot:
+    app.include_router(spiderfoot.router, prefix=settings.API_V1_STR)
 
 try:
     from routers import threat_actors
@@ -437,7 +441,7 @@ async def get_api_health():
         except Exception:
             return {"name": name, "status": "offline", "code": None}
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         tasks = [ping_api(client, name, url, headers) for name, url, headers in checks]
         statuses = await asyncio.gather(*tasks)
         

@@ -37,14 +37,14 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
 
         # 2. Parallel scans
         try:
-            vt_task = asyncio.wait_for(virustotal_service.get_domain_report(domain), timeout=8.0)
+            vt_task = asyncio.wait_for(virustotal_service.get_domain_report(domain), timeout=30.0)
             urlscan_task = asyncio.wait_for(urlscan_service.search_indicator(domain, "domain"), timeout=8.0)
             otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(domain, "domain"), timeout=8.0)
 
             # Local OSINT tasks
-            dns_task = asyncio.wait_for(osint_service.get_dns_records(domain), timeout=5.0)
-            whois_task = asyncio.wait_for(osint_service.get_whois_data(domain), timeout=5.0)
-            ssl_task = asyncio.wait_for(osint_service.get_ssl_metadata(domain), timeout=5.0)
+            dns_task = asyncio.wait_for(osint_service.get_dns_records(domain), timeout=30.0)
+            whois_task = asyncio.wait_for(osint_service.get_whois_data(domain), timeout=30.0)
+            ssl_task = asyncio.wait_for(osint_service.get_ssl_metadata(domain), timeout=30.0)
 
             vt_res, urlscan_res, otx_res, dns_res, whois_res, ssl_res = await asyncio.gather(
                 vt_task, urlscan_task, otx_task, dns_task, whois_task, ssl_task,

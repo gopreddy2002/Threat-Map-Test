@@ -26,7 +26,8 @@ class AbuseIPDBService:
             logger.warning("AbuseIPDB API key missing or invalid. Returning clean fallback.")
             return self._get_fallback_data(ip)
 
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
             try:
                 response = await client.get(url, headers=self.headers, params=params)
                 if response.status_code == 200:

@@ -17,7 +17,8 @@ class GreyNoiseService:
     async def check_ip(self, ip: str) -> Dict[str, Any]:
         url = f"{self.base_url}/{ip}"
         
-        async with httpx.AsyncClient(timeout=6.0) as client:
+        transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:

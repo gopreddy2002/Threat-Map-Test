@@ -11,6 +11,7 @@ class IPInfoService:
     def __init__(self):
         self.token = settings.IPINFO_API_TOKEN
         self.base_url = "https://ipinfo.io"
+        print(f"IPInfo token loaded: {bool(self.token)}")
 
     async def get_ip_info(self, ip: str) -> Dict[str, Any]:
         # Unique per-IP cache key — NEVER a static string
@@ -29,7 +30,8 @@ class IPInfoService:
         else:
             url = f"{self.base_url}/{ip}/json"
 
-        async with httpx.AsyncClient(timeout=6.0) as client:
+        transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
             try:
                 response = await client.get(url)
                 if response.status_code == 200:

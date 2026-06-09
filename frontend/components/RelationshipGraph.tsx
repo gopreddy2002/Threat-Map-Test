@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import CytoscapeComponent from 'react-cytoscapejs';
+import cytoscape from 'cytoscape';
 
 interface Node {
   id: string;
@@ -20,20 +22,28 @@ interface RelationshipGraphProps {
   edges: Edge[];
 }
 
-const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  ioc:    { bg: "bg-indigo-500/10",  border: "border-indigo-500/40",  text: "text-indigo-300",  dot: "bg-indigo-500" },
-  asn:    { bg: "bg-sky-500/10",     border: "border-sky-500/40",     text: "text-sky-300",     dot: "bg-sky-500" },
-  country:{ bg: "bg-emerald-500/10", border: "border-emerald-500/40", text: "text-emerald-300", dot: "bg-emerald-500" },
-  actor:  { bg: "bg-red-500/10",     border: "border-red-500/40",     text: "text-red-300",     dot: "bg-red-500" },
-  subnet: { bg: "bg-amber-500/10",   border: "border-amber-500/40",   text: "text-amber-300",   dot: "bg-amber-500" },
-};
-
-const TYPE_ICONS: Record<string, string> = {
-  ioc: "sensors", asn: "account_tree", country: "public", actor: "person_alert", subnet: "lan",
+const TYPE_COLORS: Record<string, string> = {
+  ioc: "#6366f1",    // indigo-500
+  asn: "#0ea5e9",    // sky-500
+  country: "#10b981",// emerald-500
+  actor: "#ef4444",  // red-500
+  subnet: "#f59e0b", // amber-500
 };
 
 export const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ nodes, edges }) => {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || typeof window === 'undefined') {
+    return (
+      <div className="flex items-center justify-center h-[400px] border border-white/5 bg-white/[0.02] rounded-xl text-xs text-on-surface-variant font-mono-sm">
+        LOADING GRAPH...
+      </div>
+    );
+  }
 
   if (nodes.length === 0) {
     return (
@@ -44,113 +54,81 @@ export const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ nodes, edg
     );
   }
 
-  // Build adjacency map for highlighting connected edges
-  const connectedNodes = new Set<string>();
-  if (selected) {
-    edges.forEach(e => {
-      if (e.from === selected) connectedNodes.add(e.to);
-      if (e.to === selected) connectedNodes.add(e.from);
-    });
-  }
+  try {
+    const elements: cytoscape.ElementDefinition[] = [
+      ...nodes.map(n => ({
+        data: { id: n.id, label: n.label, type: n.type, color: TYPE_COLORS[n.type] || TYPE_COLORS.ioc }
+      })),
+      ...edges.map(e => ({
+        data: { source: e.from, target: e.to, label: e.label || '' }
+      }))
+    ];
 
-  // Group nodes by type for tree layout
-  const grouped: Record<string, Node[]> = {};
-  nodes.forEach(n => {
-    if (!grouped[n.type]) grouped[n.type] = [];
-    grouped[n.type].push(n);
-  });
+    const stylesheet: cytoscape.Stylesheet[] = [
+      {
+        selector: 'node',
+        style: {
+          'background-color': 'data(color)',
+          'label': 'data(label)',
+          'color': '#ffffff',
+          'text-valign': 'bottom',
+          'text-margin-y': 5,
+          'font-size': '10px',
+          'font-family': 'monospace',
+          'width': 24,
+          'height': 24
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 2,
+          'line-color': '#ffffff',
+          'target-arrow-color': '#ffffff',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'opacity': 0.3,
+          'label': 'data(label)',
+          'font-size': '8px',
+          'color': '#ffffff',
+          'text-background-opacity': 1,
+          'text-background-color': '#111111',
+          'text-background-padding': '2px',
+          'text-background-shape': 'roundrectangle'
+        }
+      }
+    ];
 
-  return (
-    <div className="space-y-4">
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3">
-        {Object.entries(TYPE_COLORS).map(([type, c]) => (
-          <div key={type} className="flex items-center gap-1.5 text-[10px] text-on-surface-variant font-mono">
-            <div className={`w-2.5 h-2.5 rounded-full ${c.dot}`} />
-            {type.toUpperCase()}
-          </div>
-        ))}
-      </div>
-
-      {/* Relationship Cards */}
-      <div className="space-y-3">
-        {Object.entries(grouped).map(([type, typeNodes]) => {
-          const c = TYPE_COLORS[type] || TYPE_COLORS.ioc;
-          return (
-            <div key={type}>
-              <p className={`text-[10px] font-mono uppercase tracking-widest mb-2 ${c.text}`}>
-                <span className="material-symbols-outlined text-[12px] align-middle mr-1">{TYPE_ICONS[type] || "circle"}</span>
-                {type} ({typeNodes.length})
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {typeNodes.map(node => {
-                  const isSelected = selected === node.id;
-                  const isConnected = connectedNodes.has(node.id);
-                  const dimmed = selected && !isSelected && !isConnected;
-
-                  // Find edges for this node
-                  const nodeEdges = edges.filter(e => e.from === node.id || e.to === node.id);
-
-                  return (
-                    <button
-                      key={node.id}
-                      onClick={() => setSelected(isSelected ? null : node.id)}
-                      className={`text-left p-3 rounded-xl border transition-all duration-200 ${c.bg} ${
-                        isSelected
-                          ? `${c.border} ring-1 ring-inset ${c.border.replace("border-", "ring-")}`
-                          : isConnected
-                          ? "border-white/20 bg-white/5"
-                          : dimmed
-                          ? "border-white/5 opacity-30"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`material-symbols-outlined text-[14px] ${c.text}`}>
-                          {TYPE_ICONS[type] || "circle"}
-                        </span>
-                        <span className={`text-xs font-bold truncate ${c.text}`}>{node.label}</span>
-                        {node.risk !== undefined && (
-                          <span className={`ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                            node.risk >= 70 ? "bg-red-500/20 text-red-300 border-red-500/30" :
-                            node.risk >= 40 ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
-                            "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          }`}>{node.risk}</span>
-                        )}
-                      </div>
-                      {nodeEdges.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {nodeEdges.map((e, i) => {
-                            const other = e.from === node.id
-                              ? nodes.find(n => n.id === e.to)
-                              : nodes.find(n => n.id === e.from);
-                            return (
-                              <span key={i} className="text-[9px] text-on-surface-variant/60 bg-white/5 border border-white/5 px-1.5 py-0.5 rounded font-mono">
-                                {e.label ? `${e.label}: ` : "→ "}{other?.label?.substring(0, 12) || "?"}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+    return (
+      <div className="space-y-4">
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(TYPE_COLORS).map(([type, color]) => (
+            <div key={type} className="flex items-center gap-1.5 text-[10px] text-on-surface-variant font-mono">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+              {type.toUpperCase()}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Edge summary when node selected */}
-      {selected && connectedNodes.size > 0 && (
-        <div className="mt-2 p-3 rounded-lg bg-white/3 border border-white/10 text-[11px] text-on-surface-variant font-mono">
-          <span className="text-primary font-bold">{nodes.find(n => n.id === selected)?.label}</span>
-          {" "}is connected to {connectedNodes.size} node{connectedNodes.size > 1 ? "s" : ""}.{" "}
-          <button onClick={() => setSelected(null)} className="text-white/50 hover:text-white underline">Clear</button>
+          ))}
         </div>
-      )}
-    </div>
-  );
+
+        <div className="h-[400px] w-full border border-white/10 rounded-xl bg-black/20 relative overflow-hidden">
+          <CytoscapeComponent 
+            elements={elements} 
+            style={{ width: '100%', height: '100%' }} 
+            stylesheet={stylesheet}
+            layout={{ name: 'concentric', minNodeSpacing: 50 }}
+          />
+        </div>
+      </div>
+    );
+  } catch (err) {
+    console.error("Cytoscape render error:", err);
+    return (
+      <div className="flex items-center justify-center h-[400px] border border-red-500/20 bg-red-500/5 rounded-xl text-xs text-red-400 font-mono-sm">
+        Error rendering network graph. Check console.
+      </div>
+    );
+  }
 };
 
 export default RelationshipGraph;

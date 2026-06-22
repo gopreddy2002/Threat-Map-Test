@@ -260,7 +260,10 @@ export default function Dashboard() {
                   <RechartsTooltip
                     cursor={{ fill: "#ffffff08" }}
                     contentStyle={{ backgroundColor: "#0f172a", borderColor: "#ffffff20", borderRadius: "8px", fontSize: "12px" }}
-                    formatter={(value: number) => [`${value} scan${value !== 1 ? "s" : ""}`, "Total"]}
+                    formatter={(value) => {
+                      const num = Number(value) || 0;
+                      return [`${num} scan${num !== 1 ? "s" : ""}`, "Total"];
+                    }}
                     labelFormatter={(label) => `📅 ${label}`}
                   />
                   <Bar dataKey="scans" radius={[4, 4, 0, 0]} barSize={18}>

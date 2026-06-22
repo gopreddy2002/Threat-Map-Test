@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         default="your url",
         description="Redis connection URL"
     )
-    UPSTASH_REDIS_REST_URL: str = "your_url
+    UPSTASH_REDIS_REST_URL: str = "your_url"
     UPSTASH_REDIS_REST_TOKEN: str = "your_link"
     
     # Security API Keys (Defaulted to the provided keys for zero-setup ease of evaluation)

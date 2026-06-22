@@ -166,7 +166,7 @@ def _export_pdf(scan: Scan):
         ["Indicator Target:", scan.indicator],
         ["Indicator Type:", scan.type.upper()],
         ["Scan ID:", scan.id],
-        ["Scan Date:", scan.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")],
+        ["Scan Date:", scan.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if scan.created_at else "Unknown"],
         ["Risk Score:", f"{scan.risk_score} / 100"],
         ["Risk Level:", scan.risk_level]
     ]

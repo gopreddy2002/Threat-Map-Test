@@ -187,7 +187,7 @@ export const api = {
   },
 
   getThreatActors: async () => {
-    const response = await apiClient.get(`/threat-actors`);
+    const response = await apiClient.get(`/threat-actors/`);
     return response.data;
   },
 
@@ -198,7 +198,7 @@ export const api = {
 
   // Campaigns
   getCampaigns: async () => {
-    const response = await apiClient.get(`/campaigns`);
+    const response = await apiClient.get(`/campaigns/`);
     return response.data;
   },
   getCampaign: async (id: string) => {
@@ -206,7 +206,7 @@ export const api = {
     return response.data;
   },
   createCampaign: async (name: string, description?: string) => {
-    const response = await apiClient.post(`/campaigns`, { name, description });
+    const response = await apiClient.post(`/campaigns/`, { name, description });
     return response.data;
   },
   deleteCampaign: async (id: string) => {
@@ -228,7 +228,7 @@ export const api = {
     return response.data;
   },
   addNote: async (indicator: string, text: string, author?: string) => {
-    const response = await apiClient.post(`/notes`, { indicator, text, author });
+    const response = await apiClient.post(`/notes/`, { indicator, text, author });
     return response.data;
   },
   upvoteNote: async (noteId: number) => {

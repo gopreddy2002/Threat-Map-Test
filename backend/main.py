@@ -481,4 +481,5 @@ def get_dashboard_telemetry(db: Session = Depends(get_db)):
     }
 
 # Vercel requires this for serverless functions
-from main import app as handler
+from mangum import Mangum
+handler = Mangum(app)

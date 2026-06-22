@@ -134,7 +134,8 @@ export default function CyberBackground() {
         scrollSpeedY,
         life: 0,
         maxLife: 800, // Enough time to cross screen
-        chars: text.split("").map(() => ({
+        chars: text.split("").map((c) => ({
+          char: c,
           vx: (Math.random() - 0.5) * 30,
           vy: (Math.random() - 0.5) * 30
         }))

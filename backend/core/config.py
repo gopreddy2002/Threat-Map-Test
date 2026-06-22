@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = Field(
-        default="sqlite:///./threatmap.db",
+        default="sqlite:////tmp/threatmap.db" if os.environ.get("VERCEL") else "sqlite:///./threatmap.db",
         description="SQLAlchemy PostgreSQL connection string or local SQLite fallback."
     )
     

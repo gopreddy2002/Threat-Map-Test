@@ -155,8 +155,11 @@ async def keepalive_ping():
 @app.on_event("startup")
 def startup_event():
     logger.info("Initializing database schemas...")
-    init_db()
-    logger.info("Database loaded successfully.")
+    try:
+        init_db()
+        logger.info("Database loaded successfully.")
+    except Exception as e:
+        logger.error(f"Database init failed: {e}")
     asyncio.create_task(keepalive_ping())
 
 # WebSocket Connection Manager

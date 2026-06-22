@@ -10,7 +10,7 @@ export default function SpiderfootPanel({ target }: { target: string }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+  const BASE = process.env.NEXT_PUBLIC_API_URL || "/_/backend/api/v1";
 
   const startScan = async () => {
     setStatus("running");

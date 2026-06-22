@@ -16,7 +16,7 @@ class ScanResponse(ScanBase):
     risk_level: str
     summary: Optional[str] = None
     raw_data: Optional[Dict[str, Any]] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

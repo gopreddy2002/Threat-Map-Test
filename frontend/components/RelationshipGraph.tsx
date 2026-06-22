@@ -64,7 +64,7 @@ export const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ nodes, edg
       }))
     ];
 
-    const stylesheet: cytoscape.Stylesheet[] = [
+    const stylesheet: cytoscape.StylesheetCSS[] = [
       {
         selector: 'node',
         style: {

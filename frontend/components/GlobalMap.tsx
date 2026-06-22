@@ -84,8 +84,8 @@ export const GlobalMap: React.FC<GlobalMapProps> = ({ points }) => {
       mapInstanceRef.current = map;
 
       L.tileLayer(
-        "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
-        { attribution: "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap", maxZoom: 20 }
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { attribution: "&copy; CARTO &copy; OpenStreetMap", maxZoom: 20 }
       ).addTo(map);
 
       activePoints.forEach((pt) => {

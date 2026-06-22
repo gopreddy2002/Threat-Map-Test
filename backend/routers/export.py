@@ -65,7 +65,7 @@ def _export_json(scan: Scan):
         "risk_score": scan.risk_score,
         "risk_level": scan.risk_level,
         "summary": scan.summary,
-        "created_at": scan.created_at.isoformat(),
+        "created_at": scan.created_at.isoformat() if scan.created_at else None,
         "raw_data": scan.raw_data
     }
     json_bytes = json.dumps(data, indent=2).encode("utf-8")
@@ -86,7 +86,7 @@ def _export_csv(scan: Scan):
     writer.writerow(["Type", scan.type])
     writer.writerow(["Risk Score", scan.risk_score])
     writer.writerow(["Risk Level", scan.risk_level])
-    writer.writerow(["Created At", scan.created_at.isoformat()])
+    writer.writerow(["Created At", scan.created_at.isoformat() if scan.created_at else "Unknown"])
     writer.writerow(["Summary", scan.summary])
     
     raw_data = scan.raw_data or {}

@@ -26,7 +26,7 @@ export default function AnimatedBackground() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-background">
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-transparent">
       <style>{`
         @keyframes radar-spin {
           from { transform: rotate(0deg); }

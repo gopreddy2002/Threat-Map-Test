@@ -109,6 +109,23 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-2xl font-black text-white font-headline-lg">Command Center</h1>
+        <button 
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+            queryClient.invalidateQueries({ queryKey: ['scanActivity'] });
+            queryClient.invalidateQueries({ queryKey: ['topIocs'] });
+            queryClient.invalidateQueries({ queryKey: ['apiHealth'] });
+          }}
+          disabled={loading}
+          className="bg-surface-container-low border border-white/10 hover:bg-white/5 text-white py-1.5 px-4 rounded-lg text-[11px] font-bold font-mono-sm flex items-center gap-2 transition-all disabled:opacity-50 hover:border-primary/50 hover:text-primary"
+        >
+          <span className={`material-symbols-outlined text-[16px] ${loading ? 'animate-spin text-primary' : ''}`}>refresh</span>
+          REFRESH
+        </button>
+      </div>
+
       {/* Live Threat Ticker (Top IOCs) */}
       {topIocs && topIocs.top_iocs && topIocs.top_iocs.length > 0 && (
         <div className="bg-surface-container-low border border-white/10 rounded-lg overflow-hidden flex items-center">
@@ -173,8 +190,8 @@ export default function Dashboard() {
 
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="glass-panel p-md rounded-xl flex items-center justify-between hover:border-white/10 transition-all duration-300">
           <div className="space-y-1.5">
-            <p className="text-[11px] font-mono-sm uppercase text-on-surface-variant">Active Threat Types</p>
-            <AnimatedCounter value={stats.active_campaigns} className="text-3xl font-black text-primary-container block" />
+            <p className="text-[11px] font-mono-sm uppercase text-on-surface-variant">Monitored IOCs</p>
+            <AnimatedCounter value={stats.monitored_iocs || 0} className="text-3xl font-black text-primary-container block" />
           </div>
           <div className="p-3 rounded-lg bg-primary-container/10 border border-primary-container/20 text-primary-container">
             <span className="material-symbols-outlined text-[24px]">visibility</span>

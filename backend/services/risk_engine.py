@@ -91,6 +91,29 @@ class RiskEngine:
         else:
             level = "CRITICAL"
 
+        # Confidence Scoring
+        apis_tried = 1 # VT always tried
+        apis_succeeded = 0
+        if vt_data and (vt_data.get("data") or vt_data.get("malicious") is not None):
+            apis_succeeded += 1
+            
+        if indicator_type == "ip":
+            apis_tried += 2
+            if abuse_data and (abuse_data.get("data") or abuse_data.get("abuseConfidenceScore") is not None):
+                apis_succeeded += 1
+            if greynoise_data and greynoise_data.get("ip") or greynoise_data.get("classification"):
+                apis_succeeded += 1
+                
+        confidence_ratio = apis_succeeded / apis_tried if apis_tried > 0 else 0
+        confidence_score = int(confidence_ratio * 100)
+        
+        if confidence_ratio >= 0.8:
+            confidence_level = "HIGH"
+        elif confidence_ratio >= 0.4:
+            confidence_level = "MEDIUM"
+        else:
+            confidence_level = "LOW"
+
         return {
             "score": final,
             "level": level,
@@ -102,7 +125,9 @@ class RiskEngine:
             },
             "vt_malicious": vt_malicious,
             "abuse_score": abuse_score,
-            "greynoise": classification
+            "greynoise": classification,
+            "confidence_score": confidence_score,
+            "confidence_level": confidence_level
         }
 
 risk_engine = RiskEngine()

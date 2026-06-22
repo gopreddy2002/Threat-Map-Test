@@ -1,6 +1,7 @@
 import os
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ThreatMap API"
@@ -32,9 +33,16 @@ class Settings(BaseSettings):
     # GreyNoise community API headers default
     GREYNOISE_API_KEY: str = "TreatMap"
     
+    # Optional Keys
+    GROQ_API_KEY: Optional[str] = None
+    OTX_API_KEY: Optional[str] = None
+    SHODAN_API_KEY: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+        extra = "ignore"
+        extra = "ignore"
 
 settings = Settings()

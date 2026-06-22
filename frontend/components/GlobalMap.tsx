@@ -122,7 +122,11 @@ export const GlobalMap: React.FC<GlobalMapProps> = ({ points }) => {
         }).addTo(map);
       });
 
-      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 100);
     });
 
     return () => {

@@ -74,6 +74,11 @@ export const api = {
     await apiClient.delete(`/watchlist/${encodeURIComponent(indicator)}`);
   },
 
+  updateWatchlistItem: async (indicator: string, data: any) => {
+    const response = await apiClient.patch(`/watchlist/${encodeURIComponent(indicator)}`, data);
+    return response.data;
+  },
+
   scanWatchlistAll: async () => {
     const response = await apiClient.post("/watchlist/scan-all");
     return response.data;
@@ -163,6 +168,14 @@ export const api = {
     return `${API_BASE_URL}/export/${scanId}?format=${format}`;
   },
 
+  getBulkExportUrl: (format: "csv" | "json" = "csv"): string => {
+    return `${API_BASE_URL}/export/watchlist/bulk?format=${format}`;
+  },
+
+  getRssFeedUrl: (): string => {
+    return `${API_BASE_URL}/export/feed/rss`;
+  },
+
   exportStix: async (scanId: string) => {
     const response = await apiClient.get(`/export/stix/${scanId}`);
     return response.data;
@@ -221,6 +234,60 @@ export const api = {
   // Health check
   healthCheck: async () => {
     const response = await apiClient.get(`/health`);
+    return response.data;
+  },
+
+  // AI Chat
+  askAi: async (message: string, history: any[] = [], model: string = "openai/gpt-oss-120b") => {
+    const response = await apiClient.post(`/chat`, { message, history, model });
+    return response.data;
+  },
+
+  // AI Chat with Image
+  askAiWithImage: async (message: string, file: File) => {
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("file", file);
+    
+    const response = await apiClient.post(`/chat/image`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  // Tools
+  toolsEmailHeaders: async (rawHeaders: string) => {
+    const response = await apiClient.post(`/tools/email-headers`, { raw_headers: rawHeaders });
+    return response.data;
+  },
+  toolsTyposquatting: async (domain: string) => {
+    const response = await apiClient.get(`/tools/typosquatting`, { params: { domain } });
+    return response.data;
+  },
+  toolsDecode: async (payload: string, decodeType: string = "auto") => {
+    const response = await apiClient.post(`/tools/decode`, { payload, decode_type: decodeType });
+    return response.data;
+  },
+  toolsDns: async (domain: string) => {
+    const response = await apiClient.get(`/tools/dns`, { params: { domain } });
+    return response.data;
+  },
+  toolsShodan: async (ip: string) => {
+    const response = await apiClient.get(`/tools/shodan`, { params: { ip } });
+    return response.data;
+  },
+  toolsMac: async (mac: string) => {
+    const response = await apiClient.get(`/tools/mac`, { params: { mac } });
+    return response.data;
+  },
+  toolsNetworkRange: async (cidr: string) => {
+    const response = await apiClient.get(`/tools/network-range`, { params: { cidr } });
+    return response.data;
+  },
+  toolsHttpHeaders: async (url: string) => {
+    const response = await apiClient.get(`/tools/http-headers`, { params: { url } });
     return response.data;
   },
 };

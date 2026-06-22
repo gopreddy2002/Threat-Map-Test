@@ -6,12 +6,16 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from models.database import get_db, Scan
+from models.database import get_db, Scan, Watchlist
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/export", tags=["Export Reports"])
@@ -321,3 +325,154 @@ def export_stix(scan_id: str, db: Session = Depends(get_db)):
         media_type="application/json",
         headers={"Content-Disposition": f"attachment; filename=threatmap_stix_{scan.indicator}.json"}
     )
+
+
+@router.get("/watchlist/bulk")
+def export_watchlist_bulk(
+    format: str = Query("csv", description="Export format: json or csv"),
+    db: Session = Depends(get_db)
+):
+    items = db.query(Watchlist).all()
+    
+    if format.lower() == "json":
+        data = [
+            {
+                "id": i.id,
+                "indicator": i.indicator,
+                "type": i.type,
+                "added_at": i.added_at.isoformat(),
+                "last_risk_score": i.last_risk_score,
+                "notes": i.notes,
+                "tags": i.tags
+            } for i in items
+        ]
+        json_bytes = json.dumps(data, indent=2).encode("utf-8")
+        return Response(
+            content=json_bytes,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=threatmap_watchlist.json"}
+        )
+    elif format.lower() == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["ID", "Indicator", "Type", "Added At", "Last Risk Score", "Notes", "Tags"])
+        for i in items:
+            writer.writerow([i.id, i.indicator, i.type, i.added_at.isoformat(), i.last_risk_score, i.notes, i.tags])
+        
+        output.seek(0)
+        return StreamingResponse(
+            io.BytesIO(output.read().encode("utf-8")),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=threatmap_watchlist.csv"}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid format specified.")
+
+
+@router.get("/feed/rss")
+def export_rss_feed(db: Session = Depends(get_db)):
+    """Generate an RSS feed of recent HIGH and CRITICAL threats."""
+    scans = db.query(Scan).filter(
+        Scan.risk_level.in_(["HIGH", "CRITICAL"])
+    ).order_by(Scan.created_at.desc()).limit(50).all()
+
+    output = io.StringIO()
+    output.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+    output.write('<rss version="2.0">\n')
+    output.write('<channel>\n')
+    output.write('  <title>ThreatMap High Risk Intelligence Feed</title>\n')
+    output.write('  <link>http://localhost:3000</link>\n')
+    output.write('  <description>Automated OSINT alerts for critical threats</description>\n')
+    
+    for scan in scans:
+        output.write('  <item>\n')
+        output.write(f'    <title>{scan.risk_level} Threat Detected: {scan.indicator}</title>\n')
+        output.write(f'    <link>http://localhost:3000/results/{scan.id}</link>\n')
+        output.write(f'    <description>{scan.summary or "Automated scan finding"}. Score: {scan.risk_score}</description>\n')
+        output.write(f'    <pubDate>{scan.created_at.strftime("%a, %d %b %Y %H:%M:%S GMT")}</pubDate>\n')
+        output.write(f'    <guid>{scan.id}</guid>\n')
+        output.write('  </item>\n')
+        
+    output.write('</channel>\n')
+    output.write('</rss>\n')
+
+    return Response(
+        content=output.getvalue().encode("utf-8"),
+        media_type="application/rss+xml",
+        headers={"Content-Disposition": "attachment; filename=threatmap_feed.xml"}
+    )
+
+
+class DriveUploadRequest(BaseModel):
+    scan_id: str
+    access_token: str
+
+@router.post("/drive")
+def export_to_drive(request: DriveUploadRequest, db: Session = Depends(get_db)):
+    """Uploads a generated PDF report directly to the user's Google Drive."""
+    scan = db.query(Scan).filter(Scan.id == request.scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan record not found.")
+
+    # 1. Generate the PDF bytes
+    try:
+        pdf_response = _export_pdf(scan)
+        pdf_bytes = pdf_response.body
+    except Exception as e:
+        logger.error(f"Failed to generate PDF for drive export: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF report.")
+
+    # 2. Authenticate to Google Drive
+    try:
+        credentials = Credentials(token=request.access_token)
+        service = build('drive', 'v3', credentials=credentials)
+    except Exception as e:
+        logger.error(f"Failed to authenticate with Google Drive API: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired Google access token.")
+
+    # 3. Find or Create "ThreatMap Reports" folder
+    folder_name = "ThreatMap Reports"
+    folder_id = None
+    try:
+        # Search for the folder
+        query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        items = results.get('files', [])
+        
+        if not items:
+            # Create the folder
+            folder_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+            folder = service.files().create(body=folder_metadata, fields='id').execute()
+            folder_id = folder.get('id')
+        else:
+            folder_id = items[0].get('id')
+    except Exception as e:
+        logger.error(f"Failed to find/create Drive folder: {e}")
+        raise HTTPException(status_code=500, detail="Failed to access Google Drive.")
+
+    # 4. Upload the PDF
+    file_name = f"threatmap_report_{scan.indicator}.pdf"
+    file_metadata = {
+        'name': file_name,
+        'parents': [folder_id]
+    }
+    try:
+        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink'
+        ).execute()
+        
+        return {
+            "status": "success",
+            "file_id": uploaded_file.get("id"),
+            "webViewLink": uploaded_file.get("webViewLink")
+        }
+    except Exception as e:
+        logger.error(f"Failed to upload file to Google Drive: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload report to Google Drive.")
+

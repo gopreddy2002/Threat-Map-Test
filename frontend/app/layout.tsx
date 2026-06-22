@@ -4,6 +4,9 @@ import "./globals.css";
 import AppLayout from "@/components/AppLayout";
 import Providers from "@/components/Providers";
 import ConnectionBanner from "@/components/ConnectionBanner";
+import CyberBackground from "@/components/CyberBackground";
+import { ChatProvider } from "@/context/ChatContext";
+import ChatWidget from "@/components/ChatWidget";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,8 +43,14 @@ export default function RootLayout({
       </head>
       <body className="antialiased font-sans">
         <Providers>
-          <ConnectionBanner />
-          <AppLayout>{children}</AppLayout>
+          <ChatProvider>
+            <CyberBackground />
+            <ConnectionBanner />
+            <div className="relative z-10">
+              <AppLayout>{children}</AppLayout>
+            </div>
+            <ChatWidget />
+          </ChatProvider>
         </Providers>
       </body>
     </html>

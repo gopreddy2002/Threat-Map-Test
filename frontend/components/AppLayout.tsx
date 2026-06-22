@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession, signIn, signOut } from "next-auth/react";
 import AnimatedBackground from "./AnimatedBackground";
 
 interface AppLayoutProps {
@@ -14,6 +15,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const pathname = usePathname();
   const [alerts, setAlerts] = React.useState<any[]>([]);
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(true);
+  const { data: session } = useSession();
+
+  React.useEffect(() => {
+    const isLight = localStorage.getItem("threatmap_theme") === "light";
+    if (isLight) {
+      setIsDarkMode(false);
+      document.documentElement.classList.add("light-theme");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add("light-theme");
+      localStorage.setItem("threatmap_theme", "light");
+    } else {
+      document.documentElement.classList.remove("light-theme");
+      localStorage.setItem("threatmap_theme", "dark");
+    }
+  };
 
   React.useEffect(() => {
     // We import api dynamically or use the global api if it was imported. 
@@ -40,6 +63,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       name: "Dashboard",
       href: "/dashboard",
       icon: <span className="material-symbols-outlined text-[20px]">analytics</span>,
+    },
+    {
+      name: "Standalone Tools",
+      href: "/tools",
+      icon: <span className="material-symbols-outlined text-[20px]">build</span>,
     },
     {
       name: "Watchlist & Alerts",
@@ -70,6 +98,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       name: "About",
       href: "/about",
       icon: <span className="material-symbols-outlined text-[20px]">info</span>,
+    },
+    {
+      name: "AI Assistant",
+      href: "/chat",
+      icon: <span className="material-symbols-outlined text-[20px]">smart_toy</span>,
     },
   ];
 
@@ -127,7 +160,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
 
         {/* Footer/System Status */}
-        <div className="mt-auto pt-md border-t border-white/5 space-y-2">
+        <div className="mt-auto pt-md border-t border-white/5 space-y-2 relative">
+          <button
+            onClick={toggleTheme}
+            className="absolute -top-12 right-2 p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors border border-white/5"
+            title="Toggle Theme"
+          >
+            <span className="material-symbols-outlined text-[16px]">
+              {isDarkMode ? "light_mode" : "dark_mode"}
+            </span>
+          </button>
+          
           <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
             <div className="w-2 h-2 rounded-full bg-[#adc6ff] animate-ping" />
             <span>DB ENGINE: CONNECTED</span>
@@ -218,6 +261,60 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low border border-white/10 overflow-hidden hover:border-primary/50 transition-colors"
+              >
+                {session?.user?.image ? (
+                  <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant">person</span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showProfileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-56 bg-surface border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+                  >
+                    {session ? (
+                      <>
+                        <div className="px-4 py-3 border-b border-white/5 bg-surface-container-low">
+                          <p className="text-sm font-semibold text-white truncate">{session.user?.name}</p>
+                          <p className="text-xs text-on-surface-variant truncate">{session.user?.email}</p>
+                        </div>
+                        <div className="p-1">
+                          <button
+                            onClick={() => { setShowProfileMenu(false); signOut(); }}
+                            className="w-full text-left px-3 py-2 text-sm text-error hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">logout</span>
+                            Sign Out
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-1">
+                        <button
+                          onClick={() => { setShowProfileMenu(false); signIn("google"); }}
+                          className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">login</span>
+                          Sign in with Google
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </header>

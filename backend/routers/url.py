@@ -68,8 +68,31 @@ async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
         raw_aggregation = {
             "virustotal": vt_res,
             "urlscan": urlscan_res,
-            "alienvault_otx": otx_res
+            "alienvault_otx": otx_res,
+            "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }
+
+        # Phishing Kit Fingerprinting (DOM/Header Analysis)
+        phishing_kit_matches = []
+        try:
+            import httpx
+            async with httpx.AsyncClient(verify=False) as client:
+                resp = await client.get(target_url, timeout=5.0, follow_redirects=True)
+                body = resp.text.lower()
+                headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
+                
+                if "x-mailer" in headers and "phish" in headers["x-mailer"]:
+                    phishing_kit_matches.append("Generic Phishing Mailer")
+                if "paypal" in body and "login" in body and "paypal.com" not in target_url.lower():
+                    phishing_kit_matches.append("PayPal Credential Harvester")
+                if "microsoft" in body and "sign in" in body and "microsoft.com" not in target_url.lower():
+                    phishing_kit_matches.append("Microsoft 365 Phishing Kit")
+                if 'name="generator"' in body and "mura cms" in body:
+                    phishing_kit_matches.append("Mura CMS (Potentially Compromised)")
+        except Exception as e:
+            logger.warning(f"[url] Phishing Kit Check failed: {e}")
+
+        raw_aggregation["phishing_kit_matches"] = phishing_kit_matches
 
         # 4. Generate AI Threat Brief — isolated, never crashes the route
         try:

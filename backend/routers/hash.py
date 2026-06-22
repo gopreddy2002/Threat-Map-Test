@@ -69,7 +69,8 @@ async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
 
         raw_aggregation = {
             "virustotal": vt_res,
-            "alienvault_otx": otx_res
+            "alienvault_otx": otx_res,
+            "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }
 
         # 4. Generate AI Threat Brief — isolated, never crashes the route

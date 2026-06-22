@@ -89,9 +89,10 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
         raw_aggregation = {
             "virustotal": vt_res,
             "abuseipdb": abuse_res,
-            "ipinfo": ipinfo_res,
             "greynoise": gn_res,
-            "alienvault_otx": otx_res
+            "ipinfo": ipinfo_res,
+            "alienvault_otx": otx_res,
+            "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }
 
         try:

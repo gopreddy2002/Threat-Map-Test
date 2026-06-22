@@ -36,6 +36,10 @@ class Watchlist(Base):
     last_scanned_at = Column(DateTime, default=datetime.datetime.utcnow)
     notes = Column(Text, nullable=True)
     last_risk_score = Column(Integer, default=0)
+    custom_threshold = Column(Integer, nullable=True) # Alert threshold e.g., 70
+    tags = Column(String(500), nullable=True) # comma separated
+    schedule_frequency = Column(String(50), nullable=True) # "daily", "weekly"
+    webhook_url = Column(String(500), nullable=True)
 
 
 class Alert(Base):

@@ -15,6 +15,9 @@ import CommunityNotes from "@/components/CommunityNotes";
 import dynamic from "next/dynamic";
 import { Download, Plus, Check, Share2, Target, FileCode2, AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
+import { useToast } from "@/context/ToastContext";
+import { useSession, signIn } from "next-auth/react";
 
 // Dynamically load the Leaflet map to avoid Next.js server-side compilation issues
 const GeoMap = dynamic(() => import("@/components/GeoMap"), {
@@ -50,6 +53,10 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [addingToCampaign, setAddingToCampaign] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "graph" | "notes">("overview");
+  const [scanHistory, setScanHistory] = useState<any[]>([]);
+  const { addToast } = useToast();
+  const { data: session } = useSession();
+  const [isSavingDrive, setIsSavingDrive] = useState(false);
 
   useEffect(() => {
     async function fetchReport() {
@@ -58,9 +65,14 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
         const data = await api.getScanReport(id);
         setScan(data);
         
+        // Fetch history for Trend Graph safely
+        if (typeof (api as any).searchHistory === 'function') {
+          (api as any).searchHistory({ query: data.indicator }).then((res: any) => setScanHistory(res.results?.reverse() || [])).catch(console.error);
+        }
+
         // Check if item is already in watchlist
         const watchlist = await api.getWatchlist();
-        const found = watchlist.some((w) => w.indicator === data.indicator);
+        const found = watchlist.some((w: any) => w.indicator === data.indicator);
         setIsAddedToWatch(found);
       } catch (err: any) {
         console.error(err);
@@ -89,6 +101,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       .catch(() => setWebVulnData(null));
   }, [scan]);
 
+  // Cyber Background Threat Reactivity
+  useEffect(() => {
+    if (scan && scan.risk_score >= 90) {
+      document.body.classList.add("threat-active");
+    } else {
+      document.body.classList.remove("threat-active");
+    }
+    return () => {
+      document.body.classList.remove("threat-active");
+    };
+  }, [scan]);
+
   const handleAddToWatchlist = async () => {
     if (!scan) return;
     try {
@@ -97,6 +121,39 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       setShowWatchModal(false);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSaveToDrive = async () => {
+    if (!scan) return;
+    if (!session) {
+      signIn("google");
+      return;
+    }
+    
+    setIsSavingDrive(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/export/drive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scan_id: scan.id,
+          access_token: (session as any).accessToken
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to upload to Google Drive");
+      
+      addToast("Saved to Google Drive successfully!", "success");
+      // Open link in a new tab if available
+      if (data.webViewLink) {
+        window.open(data.webViewLink, "_blank");
+      }
+    } catch (err: any) {
+      console.error(err);
+      addToast(err.message || "Failed to save to Drive", "error");
+    } finally {
+      setIsSavingDrive(false);
     }
   };
 
@@ -264,10 +321,31 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
               {scan.type} Indicator
             </span>
             <RiskBadge level={scan.risk_level} />
+            {scan.raw_data?.risk_confidence && (
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono-sm font-bold border ${
+                    scan.raw_data.risk_confidence.level === "HIGH" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" :
+                    scan.raw_data.risk_confidence.level === "MEDIUM" ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" :
+                    "text-error bg-error/10 border-error/20"
+                }`}>
+                    CONFIDENCE: {scan.raw_data.risk_confidence.score}%
+                </span>
+            )}
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight break-all font-mono-md select-all">
-            {scan.indicator}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight break-all font-mono-md select-all">
+              {scan.indicator}
+            </h2>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(scan.indicator);
+                addToast("IOC Copied to clipboard!", "success");
+              }}
+              className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary transition-all duration-200 shadow-sm hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] active:scale-95"
+              title="Copy IOC"
+            >
+              <span className="material-symbols-outlined text-[18px]">content_copy</span>
+            </button>
+          </div>
           <p className="text-xs text-on-surface-variant/80 font-body-sm">
             Analyzed on {new Date(scan.created_at).toLocaleString()}
           </p>
@@ -358,6 +436,21 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
               <FileCode2 size={14} />
               <span className="hidden sm:inline">STIX</span>
             </button>
+            <button
+              onClick={handleSaveToDrive}
+              disabled={isSavingDrive}
+              className={`p-2 hover:bg-white/5 rounded transition-all flex items-center gap-1.5 text-xs font-bold border-l border-white/5 ml-1 pl-3 ${
+                isSavingDrive ? "opacity-50 cursor-not-allowed text-on-surface-variant" : "text-[#4285F4] hover:text-[#4285F4]"
+              }`}
+              title={session ? "Save report to Google Drive" : "Sign in to save to Google Drive"}
+            >
+              {isSavingDrive ? (
+                <span className="w-3 h-3 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-outlined text-[14px]">add_to_drive</span>
+              )}
+              <span className="hidden sm:inline">{session ? "DRIVE" : "DRIVE (LOGIN)"}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -391,6 +484,21 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
               </div>
             ))}
           </div>
+          
+          {scanHistory.length > 1 && (
+            <div className="w-full space-y-2.5 border-t border-white/5 pt-4">
+              <p className="text-[10px] font-mono-sm uppercase text-on-surface-variant tracking-wider mb-2">IOC Risk Trend</p>
+              <div className="h-[80px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scanHistory}>
+                    <YAxis domain={[0, 100]} hide />
+                    <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', fontSize: '10px'}} labelStyle={{display: 'none'}} />
+                    <Line type="monotone" dataKey="risk_score" stroke="#f43f5e" strokeWidth={2} dot={{r: 2, fill: '#f43f5e'}} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Cell 2: Gemini AI Brief */}
@@ -570,6 +678,25 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             )}
           </DetectionCard>
 
+          {/* Phishing Kit Matches */}
+          {raw.phishing_kit_matches && raw.phishing_kit_matches.length > 0 && (
+            <DetectionCard
+              title="Phishing Fingerprint"
+              subtitle="DOM/Header analysis match"
+              status={`${raw.phishing_kit_matches.length} kit(s) found`}
+              isMalicious={true}
+              iconName="phishing"
+            >
+              <div className="flex flex-col gap-1 mt-1">
+                {raw.phishing_kit_matches.map((kit: string) => (
+                  <span key={kit} className="text-[9px] font-mono-sm bg-error/20 border border-error/30 text-error px-1.5 py-0.5 rounded truncate">
+                    {kit}
+                  </span>
+                ))}
+              </div>
+            </DetectionCard>
+          )}
+
           {/* URLScan (only domains & urls) */}
           {(scan.type === "url" || scan.type === "domain") && (
             <DetectionCard
@@ -633,6 +760,14 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                   <span>SSL Issuer:</span>
                   <span className="text-white truncate max-w-[100px]">{ssl.issuer}</span>
                 </div>
+                {raw.historical_whois_changes && raw.historical_whois_changes.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-white/10">
+                        <span className="text-[9px] text-error font-bold block mb-1">⚠️ WHOIS CHANGES DETECTED:</span>
+                        {raw.historical_whois_changes.map((c: string, idx: number) => (
+                            <p key={idx} className="text-white leading-tight mb-1">{c}</p>
+                        ))}
+                    </div>
+                )}
               </div>
             </DetectionCard>
           )}

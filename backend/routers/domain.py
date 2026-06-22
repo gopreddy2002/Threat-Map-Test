@@ -73,13 +73,40 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
         risk_score = risk_results["score"]
         risk_level = risk_results["level"]
 
+        # Historical WHOIS Comparison
+        whois_changes = []
+        try:
+            last_scan = db.query(Scan).filter(
+                Scan.indicator == domain, 
+                Scan.type == "domain"
+            ).order_by(Scan.created_at.desc()).first()
+
+            if last_scan and last_scan.raw_data and "whois_records" in last_scan.raw_data:
+                old_whois = last_scan.raw_data["whois_records"]
+                
+                # Check Registrar changes
+                old_reg = old_whois.get("registrar", "")
+                new_reg = whois_res.get("registrar", "")
+                if old_reg and new_reg and str(old_reg).lower() != str(new_reg).lower():
+                    whois_changes.append(f"Registrar changed from {old_reg} to {new_reg}")
+                
+                # Check Creation Date changes
+                old_create = old_whois.get("creation_date", "")
+                new_create = whois_res.get("creation_date", "")
+                if old_create and new_create and str(old_create) != str(new_create):
+                    whois_changes.append(f"Creation date changed (domain re-registered?). Was {old_create}, now {new_create}")
+        except Exception as e:
+            logger.warning(f"[domain] WHOIS comparison failed: {e}")
+
         raw_aggregation = {
             "virustotal": vt_res,
             "urlscan": urlscan_res,
             "alienvault_otx": otx_res,
             "dns_records": dns_res,
             "whois_records": whois_res,
-            "ssl_metadata": ssl_res
+            "ssl_metadata": ssl_res,
+            "historical_whois_changes": whois_changes,
+            "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }
 
         # 4. Request AI brief — isolated, never crashes the route

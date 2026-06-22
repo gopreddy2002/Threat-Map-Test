@@ -75,3 +75,14 @@ body {
 .leaflet-container {
   background-color: #0b1326 !important;
 }
+
+.light-theme {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.light-theme img,
+.light-theme video,
+.light-theme .leaflet-container,
+.light-theme .recharts-surface {
+  filter: invert(1) hue-rotate(180deg);
+}

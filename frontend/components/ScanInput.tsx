@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface ScanInputProps {
@@ -12,6 +12,60 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
   const [activeTab, setActiveTab] = useState<ScanType>("ip");
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
+  const [timer, setTimer] = useState(0);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("threatmap_recent_searches");
+    if (saved) {
+      try { setRecentSearches(JSON.parse(saved)); } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === "/" || (e.key === "k" && (e.ctrlKey || e.metaKey))) && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        document.getElementById("global-search-input")?.focus();
+      }
+      if (e.key === "Escape") {
+        document.getElementById("global-search-input")?.blur();
+        setIsFocused(false);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      setTimer(0);
+      interval = setInterval(() => {
+        setTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setTimer(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  useEffect(() => {
+    // Auto-detect IOC type
+    const val = inputValue.trim();
+    if (!val) return;
+    
+    // Skip auto-detect if already bulk and contains multiple
+    if (activeTab === "bulk" && (val.includes(",") || val.includes("\n"))) return;
+
+    if (val.includes(",") || val.includes("\n")) { setActiveTab("bulk"); return; }
+    if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(val)) { setActiveTab("ip"); return; }
+    if (/^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$/.test(val)) { setActiveTab("hash"); return; }
+    if (/^CVE-\d{4}-\d{4,}$/i.test(val)) { setActiveTab("cve"); return; }
+    if (/^https?:\/\//i.test(val)) { setActiveTab("url"); return; }
+    if (/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/.test(val) && !val.includes("/")) { setActiveTab("domain"); return; }
+  }, [inputValue]);
 
   const tabConfig: Record<ScanType, any> = {
     ip: {
@@ -99,8 +153,19 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
       return;
     }
 
+    // Save to recent
+    const val = inputValue.trim();
+    if (val && activeTab !== "bulk") {
+      setRecentSearches(prev => {
+        const updated = [val, ...prev.filter(i => i !== val)].slice(0, 5);
+        localStorage.setItem("threatmap_recent_searches", JSON.stringify(updated));
+        return updated;
+      });
+    }
+
     setError("");
-    onScan(inputValue.trim(), activeTab);
+    setIsFocused(false);
+    onScan(val, activeTab);
   };
 
   return (
@@ -133,11 +198,14 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
           
           {activeTab === "bulk" ? (
             <textarea
+              id="global-search-input"
               value={inputValue}
               onChange={(e) => {
                 setInputValue(e.target.value);
                 if (error) setError("");
               }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               disabled={isLoading}
               rows={4}
               className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-12 pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm resize-y"
@@ -145,16 +213,42 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
             />
           ) : (
             <input
+              id="global-search-input"
               type="text"
               value={inputValue}
               onChange={(e) => {
                 setInputValue(e.target.value);
                 if (error) setError("");
               }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               disabled={isLoading}
               className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-12 pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm"
               placeholder={tabConfig[activeTab].placeholder}
             />
+          )}
+
+          {isFocused && recentSearches.length > 0 && activeTab !== "bulk" && !inputValue && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-high border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-4 py-2 border-b border-white/5 text-[10px] font-mono-sm text-on-surface-variant uppercase flex justify-between items-center">
+                <span>Recent Searches</span>
+                <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-white/40">Esc to close</span>
+              </div>
+              {recentSearches.map((search, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setInputValue(search);
+                    setIsFocused(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 last:border-0"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">history</span>
+                  <span className="font-mono-sm">{search}</span>
+                </button>
+              ))}
+            </div>
           )}
 
           <motion.button
@@ -171,7 +265,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
             ) : (
               <span className="material-symbols-outlined text-[16px]">biotech</span>
             )}
-            {isLoading ? "ANALYZING" : "SCAN NOW"}
+            {isLoading ? `ANALYZING (${timer}S)` : "SCAN NOW"}
           </motion.button>
         </div>
         {error && <p className="text-error text-xs mt-2 px-2 font-mono-sm">{error}</p>}

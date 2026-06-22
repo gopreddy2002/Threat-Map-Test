@@ -82,6 +82,22 @@ except Exception as e:
     osint_extra = None
     spiderfoot = None
 
+try:
+    from routers import chat
+    print("chat router imported OK")
+except Exception as e:
+    print(f"chat router failed: {e}")
+    traceback.print_exc()
+    chat = None
+
+try:
+    from routers import tools
+    print("tools router imported OK")
+except Exception as e:
+    print(f"tools router failed: {e}")
+    traceback.print_exc()
+    tools = None
+
 # Setup logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -201,6 +217,10 @@ if osint_extra:
     app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
 if spiderfoot:
     app.include_router(spiderfoot.router, prefix=settings.API_V1_STR)
+if chat:
+    app.include_router(chat.router, prefix=settings.API_V1_STR)
+if tools:
+    app.include_router(tools.router, prefix=settings.API_V1_STR)
 
 try:
     from routers import threat_actors

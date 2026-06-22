@@ -25,9 +25,20 @@ class WatchlistBase(BaseModel):
     indicator: str
     type: str
     notes: Optional[str] = None
+    custom_threshold: Optional[int] = None
+    tags: Optional[str] = None
+    schedule_frequency: Optional[str] = None
+    webhook_url: Optional[str] = None
 
 class WatchlistCreate(WatchlistBase):
     pass
+
+class WatchlistUpdate(BaseModel):
+    notes: Optional[str] = None
+    custom_threshold: Optional[int] = None
+    tags: Optional[str] = None
+    schedule_frequency: Optional[str] = None
+    webhook_url: Optional[str] = None
 
 class WatchlistResponse(WatchlistBase):
     id: int

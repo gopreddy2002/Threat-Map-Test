@@ -4,11 +4,13 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from models.database import get_db, Watchlist, Alert, Scan
-from models.schemas import WatchlistResponse, WatchlistCreate, AlertResponse, AlertUpdate
+from models.schemas import WatchlistResponse, WatchlistCreate, WatchlistUpdate, AlertResponse, AlertUpdate
 from services.virustotal import virustotal_service
 from services.abuseipdb import abuse_ipdb_service
 from services.greynoise import greynoise_service
 from services.risk_engine import risk_engine
+from services.webhook_service import fire_webhook
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/watchlist", tags=["Watchlist & Alerts"])
@@ -35,9 +37,34 @@ def add_to_watchlist(payload: WatchlistCreate, db: Session = Depends(get_db)):
         indicator=indicator,
         type=ind_type,
         notes=payload.notes,
+        custom_threshold=payload.custom_threshold,
+        tags=payload.tags,
+        schedule_frequency=payload.schedule_frequency,
+        webhook_url=payload.webhook_url,
         last_risk_score=0
     )
     db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.patch("/{indicator}", response_model=WatchlistResponse)
+def update_watchlist_item(indicator: str, payload: WatchlistUpdate, db: Session = Depends(get_db)):
+    item = db.query(Watchlist).filter(Watchlist.indicator == indicator).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Indicator not found in watchlist.")
+    
+    if payload.notes is not None:
+        item.notes = payload.notes
+    if payload.custom_threshold is not None:
+        item.custom_threshold = payload.custom_threshold
+    if payload.tags is not None:
+        item.tags = payload.tags
+    if payload.schedule_frequency is not None:
+        item.schedule_frequency = payload.schedule_frequency
+    if payload.webhook_url is not None:
+        item.webhook_url = payload.webhook_url
+
     db.commit()
     db.refresh(item)
     return item
@@ -101,6 +128,16 @@ async def scan_watchlist_items(db: Session = Depends(get_db)):
                         risk_score=new_score
                     )
                     db.add(alert)
+
+                # Fire Webhook if threshold met
+                if item.webhook_url and item.custom_threshold and new_score >= item.custom_threshold:
+                    asyncio.create_task(fire_webhook(item.webhook_url, {
+                        "indicator": item.indicator,
+                        "old_score": old_score,
+                        "new_score": new_score,
+                        "alert_type": alert_type,
+                        "message": message
+                    }))
 
                 item.last_risk_score = new_score
 

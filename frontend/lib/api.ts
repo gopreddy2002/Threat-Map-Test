@@ -103,6 +103,11 @@ export const api = {
     return response.data;
   },
   
+  getPorts: async (ip: string) => {
+    const response = await apiClient.get(`/osint/ports/${ip}`);
+    return response.data;
+  },
+  
   getWhois: async (domain: string) => {
     const response = await apiClient.get(`/osint/whois/${domain}`);
     return response.data;

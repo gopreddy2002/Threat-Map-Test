@@ -211,7 +211,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-4 relative">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-white/5 rounded text-[10px] font-mono-sm text-on-secondary-container">
               <span className="material-symbols-outlined text-[12px] text-primary">dns</span>
-              <span>API SERVER: http://localhost:8000</span>
+              <span>API SERVER: /api/v1</span>
             </div>
 
             {/* Notification Bell */}

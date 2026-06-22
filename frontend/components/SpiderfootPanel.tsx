@@ -10,9 +10,7 @@ export default function SpiderfootPanel({ target }: { target: string }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const BASE = typeof window !== "undefined"
-    ? `${window.location.protocol}//${window.location.hostname}:8000/api/v1`
-    : "http://127.0.0.1:8000/api/v1";
+  const BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
   const startScan = async () => {
     setStatus("running");

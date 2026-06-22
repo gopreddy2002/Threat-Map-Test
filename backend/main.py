@@ -479,3 +479,6 @@ def get_dashboard_telemetry(db: Session = Depends(get_db)):
         "active_apis": 5,
         "avg_scan_time": "1.2s"
     }
+
+# Vercel requires this for serverless functions
+from main import app as handler

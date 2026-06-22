@@ -102,7 +102,7 @@ export default function ThreatActorsPage() {
               key={actor.id} 
               variants={itemVariants} 
               whileHover={{ y: -8, scale: 1.02, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
               className="glass-panel p-md rounded-xl hover:border-white/20 transition-colors duration-300 relative overflow-hidden group"
             >
               {/* Premium Glow effect on hover */}

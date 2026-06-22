@@ -25,7 +25,7 @@ export default function Home() {
   
   const wordVariants = {
     hidden: { opacity: 0, y: 30, filter: "blur(4px)" },
-    visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring", damping: 12, stiffness: 100 } },
+    visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring" as const, damping: 12, stiffness: 100 } },
   };
   
   const cardContainerVariants = {
@@ -38,7 +38,7 @@ export default function Home() {
   
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } },
+    visible: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 100 } },
   };
 
   const handleScan = async (indicator: string, type: "ip" | "url" | "domain" | "hash" | "bulk" | "cve") => {

@@ -51,7 +51,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, score }) => {
       <motion.span
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: [1.1, 1], opacity: 1 }}
-        transition={{ duration: 0.4, type: "spring", stiffness: 300, damping: 15 }}
+        transition={{ duration: 0.4, type: "spring" as const, stiffness: 300, damping: 15 }}
         className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold font-mono-sm border rounded-full ${style.bg} ${isCritical ? "animate-pulse" : ""}`}
       >
         <span className="material-symbols-outlined text-[14px]">{style.icon}</span>

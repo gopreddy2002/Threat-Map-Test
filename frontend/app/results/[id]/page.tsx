@@ -260,7 +260,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
         className={`rounded-xl border p-4 flex items-start gap-4 ${plainEnglish.color}`}
       >
         <span className="text-3xl leading-none mt-0.5">{plainEnglish.emoji}</span>
@@ -857,7 +857,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 key={t.id}
                 variants={{
                   hidden: { scale: 0.8, opacity: 0 },
-                  show: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 200 } }
+                  show: { scale: 1, opacity: 1, transition: { type: "spring" as const, stiffness: 200 } }
                 }}
                 whileHover={t.active ? { scale: 1.05, boxShadow: "0 0 25px rgba(239,68,68,0.6)" } : {}}
                 title={t.desc}

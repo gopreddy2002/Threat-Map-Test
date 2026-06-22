@@ -142,13 +142,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       layoutId="activeNav"
                       className="absolute inset-0 bg-primary/10 border-l-2 border-primary rounded-lg"
                       initial={false}
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      transition={{ type: "spring" as const, stiffness: 350, damping: 30 }}
                     />
                   )}
                   <motion.div 
                     className="flex items-center gap-3.5 relative z-10 w-full"
                     whileHover={{ x: isActive ? 0 : 4 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    transition={{ type: "spring" as const, stiffness: 400, damping: 25 }}
                   >
                     {item.icon}
                     {item.name}

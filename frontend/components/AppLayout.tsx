@@ -243,7 +243,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span>API SERVER: /_/backend</span>
             </div>
 
-
+            {/* Notification Bell */}
+            <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-on-surface-variant hover:text-white hover:bg-white/5 rounded-full transition-all"

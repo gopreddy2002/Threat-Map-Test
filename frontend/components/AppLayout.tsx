@@ -16,6 +16,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [alerts, setAlerts] = React.useState<any[]>([]);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isDarkMode, setIsDarkMode] = React.useState(true);
   const { data: session } = useSession();
 
@@ -109,17 +110,38 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-transparent text-on-background font-body-md text-body-md overflow-x-hidden relative">
       <AnimatedBackground />
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className="w-64 shrink-0 bg-surface border-r border-white/5 flex flex-col justify-between p-md z-20">
+      <aside 
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        } shrink-0 bg-surface border-r border-white/5 flex flex-col justify-between p-md`}
+      >
         <div>
           {/* Brand/Logo */}
-          <div className="flex items-center gap-2 mb-8 px-2">
-            <span className="material-symbols-outlined text-primary text-[28px] animate-pulse">
-              shield_lock
-            </span>
-            <span className="text-lg font-black tracking-widest text-white font-headline-lg">
-              THREAT<span className="text-primary font-light">MAP</span>
-            </span>
+          <div className="flex items-center justify-between gap-2 mb-8 px-2">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[28px] animate-pulse">
+                shield_lock
+              </span>
+              <span className="text-lg font-black tracking-widest text-white font-headline-lg">
+                THREAT<span className="text-primary font-light">MAP</span>
+              </span>
+            </div>
+            <button 
+              className="md:hidden text-on-surface-variant hover:text-white"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
           </div>
 
           {/* Navigation links */}
@@ -131,6 +153,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   key={item.name}
                   href={item.href}
                   prefetch={true}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className={`relative flex items-center px-4 py-3 rounded-lg text-sm font-semibold tracking-wide transition-colors duration-150 ${
                     isActive
                       ? "text-primary"
@@ -186,12 +209,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-0">
         {/* Header Breadcrumbs */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-lg shrink-0">
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 lg:px-lg shrink-0">
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wider font-label-caps uppercase text-on-surface-variant">
-            <Link href="/" className="hover:text-primary">ThreatMap</Link>
-            <span className="text-[10px] text-white/20">/</span>
+            <button 
+              className="md:hidden mr-2 p-1 text-on-surface-variant hover:text-white flex items-center justify-center bg-white/5 rounded-md"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <span className="material-symbols-outlined text-[20px]">menu</span>
+            </button>
+            <Link href="/" className="hover:text-primary hidden sm:inline">ThreatMap</Link>
+            <span className="text-[10px] text-white/20 hidden sm:inline">/</span>
             <span className="text-white">
               {pathname === "/"
                 ? "IOC Scanner"

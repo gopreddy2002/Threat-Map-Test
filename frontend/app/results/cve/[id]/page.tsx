@@ -31,7 +31,7 @@ export default function CveResultsPage({ params }: { params: { id: string } }) {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-16 text-center">
+      <div className="max-w-4xl mx-auto py-16 text-center px-4 md:px-8">
         <span className="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
         <h2 className="text-xl font-bold text-white mb-2">Querying NVD Database</h2>
         <p className="text-on-surface-variant text-sm">Retrieving vulnerability details for {id}...</p>
@@ -41,7 +41,7 @@ export default function CveResultsPage({ params }: { params: { id: string } }) {
 
   if (error || !cve) {
     return (
-      <div className="max-w-xl mx-auto py-16 text-center">
+      <div className="max-w-xl mx-auto py-16 text-center px-4 md:px-8">
         <span className="material-symbols-outlined text-[64px] text-error mb-4">bug_report</span>
         <h2 className="text-xl font-bold text-white mb-2">Vulnerability Not Found</h2>
         <p className="text-on-surface-variant text-sm mb-6">{error || "The requested CVE ID does not exist in the NVD database."}</p>
@@ -61,7 +61,7 @@ export default function CveResultsPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
       <div className="glass-panel p-md rounded-xl flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="material-symbols-outlined text-error text-[32px]">bug_report</span>

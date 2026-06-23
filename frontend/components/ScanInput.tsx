@@ -208,7 +208,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               disabled={isLoading}
               rows={4}
-              className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-12 pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm resize-y"
+              className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-10 sm:pl-12 pr-14 sm:pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm resize-y"
               placeholder={tabConfig[activeTab].placeholder}
             />
           ) : (
@@ -223,7 +223,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
               onFocus={() => setIsFocused(true)}
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               disabled={isLoading}
-              className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-12 pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm"
+              className="w-full bg-surface-container-lowest border border-white/10 rounded-lg pl-10 sm:pl-12 pr-14 sm:pr-32 py-3.5 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-all font-body-sm text-body-sm"
               placeholder={tabConfig[activeTab].placeholder}
             />
           )}
@@ -256,16 +256,19 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading}
-            className={`absolute right-2 top-2 bg-primary text-on-primary font-bold py-2 px-6 rounded-lg text-label-caps font-label-caps text-[12px] flex items-center gap-2 ${
+            className={`absolute right-1 sm:right-2 top-1 sm:top-2 bg-primary text-on-primary font-bold py-2 sm:px-6 px-3 rounded-lg text-label-caps font-label-caps text-[12px] flex items-center justify-center gap-2 ${
               activeTab === "bulk" ? "" : "top-1/2 -translate-y-1/2"
             } ${isLoading ? "opacity-80" : ""}`}
+            title={isLoading ? `ANALYZING (${timer}S)` : "SCAN NOW"}
           >
             {isLoading ? (
               <span className="animate-spin inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full" />
             ) : (
               <span className="material-symbols-outlined text-[16px]">biotech</span>
             )}
-            {isLoading ? `ANALYZING (${timer}S)` : "SCAN NOW"}
+            <span className="hidden sm:inline">
+              {isLoading ? `ANALYZING (${timer}S)` : "SCAN NOW"}
+            </span>
           </motion.button>
         </div>
         {error && <p className="text-error text-xs mt-2 px-2 font-mono-sm">{error}</p>}

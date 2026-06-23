@@ -58,7 +58,7 @@ export default function ThreatActorsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
       {/* Header Banner */}
       <div className="glass-panel p-md rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">

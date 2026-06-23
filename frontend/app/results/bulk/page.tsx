@@ -16,7 +16,7 @@ export default function BulkResultsPage() {
 
   if (!results) {
     return (
-      <div className="max-w-4xl mx-auto py-16 text-center">
+      <div className="max-w-4xl mx-auto py-16 text-center px-4 md:px-8">
         <span className="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
         <h2 className="text-xl font-bold text-white mb-2">Processing Bulk Telemetry</h2>
         <p className="text-on-surface-variant text-sm">Validating indicators across threat intelligence engines...</p>
@@ -25,7 +25,7 @@ export default function BulkResultsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
       <div className="glass-panel p-md rounded-xl flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">

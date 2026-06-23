@@ -219,7 +219,7 @@ export default function ToolsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12 px-4 md:px-8 mt-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white font-headline-lg tracking-wider">

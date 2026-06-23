@@ -99,7 +99,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-16 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-6xl mx-auto space-y-16 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700 px-4 md:px-8 mt-6">
       
       {/* Sticky Internal Nav */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 py-3 -mx-lg px-lg mb-8 flex gap-4 overflow-x-auto hide-scrollbar text-xs font-mono font-semibold tracking-wider uppercase text-on-surface-variant">

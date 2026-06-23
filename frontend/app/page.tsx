@@ -123,16 +123,16 @@ export default function Home() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto py-12 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
+    <div className="max-w-6xl mx-auto py-8 md:py-12 px-4 md:px-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
       {/* Title/Branding Header */}
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center p-2 rounded-xl bg-primary/10 border border-primary/20 mb-6">
-          <span className="material-symbols-outlined text-primary text-[32px] animate-pulse">
+      <div className="text-center mb-8 md:mb-12">
+        <div className="inline-flex items-center justify-center p-2 rounded-xl bg-primary/10 border border-primary/20 mb-4 md:mb-6">
+          <span className="material-symbols-outlined text-primary text-[24px] md:text-[32px] animate-pulse">
             radar
           </span>
         </div>
         <motion.h1 
-          className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-4 font-headline-lg flex justify-center flex-wrap gap-x-3"
+          className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-4 font-headline-lg flex justify-center flex-wrap gap-x-2 md:gap-x-3"
           variants={containerVariants}
           initial={prefersReducedMotion ? "visible" : "hidden"}
           animate="visible"
@@ -143,7 +143,7 @@ export default function Home() {
             </motion.span>
           ))}
         </motion.h1>
-        <p className="text-base text-on-surface-variant max-w-2xl mx-auto font-body-lg leading-relaxed">
+        <p className="text-sm md:text-base text-on-surface-variant max-w-2xl mx-auto font-body-lg leading-relaxed px-2 md:px-0">
           Aggregates IP geolocation, malicious binary signals, domain DNS mapping, and URL scan screenshots
           into a single, consolidated threat score supported by automated Google Gemini mitigation reports.
         </p>
@@ -162,8 +162,8 @@ export default function Home() {
       </div>
 
       {/* Integration Feeds Matrix */}
-      <div>
-        <h3 className="text-center font-bold font-label-caps text-label-caps text-[12px] text-on-surface-variant uppercase tracking-widest mb-6">
+      <div className="mt-8 md:mt-0">
+        <h3 className="text-center font-bold font-label-caps text-label-caps text-[11px] md:text-[12px] text-on-surface-variant uppercase tracking-widest mb-6">
           Aggregated OSINT Partners & Feeds
         </h3>
         <motion.div 

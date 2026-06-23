@@ -161,7 +161,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
   if (error || !scan) {
     return (
-      <div className="max-w-xl mx-auto py-16 text-center">
+      <div className="max-w-xl mx-auto py-16 text-center px-4 md:px-8">
         <span className="material-symbols-outlined text-[64px] text-error mb-4">gpp_maybe</span>
         <h2 className="text-xl font-bold text-white mb-2">Analysis Report Error</h2>
         <p className="text-on-surface-variant text-sm mb-6">{error || "Indicator scan not found."}</p>
@@ -254,7 +254,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const activeFeedCount = [vt, abuse, gn, otx, urlscan].filter(f => Object.keys(f).length > 0).length || 5;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
 
       {/* ── Plain English Summary Card ─────────────────────────── */}
       <motion.div 

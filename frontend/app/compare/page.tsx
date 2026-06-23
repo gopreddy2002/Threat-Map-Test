@@ -124,7 +124,7 @@ export default function ComparePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12 pt-8">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 pt-8 px-4 md:px-8">
       <div className="text-center mb-8">
         <span className="material-symbols-outlined text-[32px] text-primary mb-2">compare_arrows</span>
         <h1 className="text-3xl font-black text-white tracking-tight">Indicator Comparison</h1>

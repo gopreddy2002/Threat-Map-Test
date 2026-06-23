@@ -104,7 +104,7 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999]" style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999 }}>
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] flex flex-col items-end">
       <AnimatePresence>
         {!isWidgetOpen && (
           <motion.button
@@ -126,10 +126,10 @@ export default function ChatWidget() {
             initial={{ y: 50, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 50, opacity: 0, scale: 0.95 }}
-            className="absolute bottom-0 right-0 w-[380px] h-[520px] bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden transform-gpu"
+            className="absolute bottom-16 right-0 w-[calc(100vw-32px)] sm:w-[380px] h-[calc(100vh-140px)] sm:h-[520px] max-h-[80vh] glass-panel border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden transform-gpu"
           >
             {/* Header */}
-            <div className="h-14 border-b border-white/5 flex items-center justify-between px-4 bg-surface shrink-0">
+            <div className="h-14 border-b border-white/5 flex items-center justify-between px-4 bg-surface/50 backdrop-blur-md shrink-0">
               <div className="flex flex-col">
                 <span className="font-bold text-white text-sm">ThreatMap AI</span>
                 <span className="text-[10px] text-on-surface-variant">Powered by {MODELS.find(m => m.id === selectedModel)?.name}</span>
@@ -186,11 +186,11 @@ export default function ChatWidget() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-background/30">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    msg.role === "user" ? "bg-primary text-black font-medium" : "bg-[#111827] text-white border border-white/5 shadow-lg relative"
+                    msg.role === "user" ? "bg-primary text-black font-medium" : "bg-surface-container-high text-white border border-white/5 shadow-lg relative backdrop-blur-md"
                   }`}>
                     {msg.role === "assistant" ? (
                       <div className="text-sm">
@@ -211,7 +211,7 @@ export default function ChatWidget() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-[#111827] border border-white/5 rounded-2xl px-4 py-3 flex gap-1.5 items-center">
+                  <div className="bg-surface-container-high border border-white/5 rounded-2xl px-4 py-3 flex gap-1.5 items-center backdrop-blur-md">
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -222,7 +222,7 @@ export default function ChatWidget() {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 border-t border-white/5 bg-surface relative">
+            <div className="p-3 border-t border-white/5 bg-surface/50 backdrop-blur-md relative">
               {imageFile && (
                 <div className="absolute bottom-full mb-2 left-4 bg-surface-container-high border border-white/10 p-1 rounded-lg flex items-center gap-2">
                   <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-10 h-10 object-cover rounded" />

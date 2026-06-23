@@ -214,10 +214,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 lg:px-lg shrink-0">
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wider font-label-caps uppercase text-on-surface-variant">
             <button 
-              className="md:hidden mr-2 p-1 text-on-surface-variant hover:text-white flex items-center justify-center bg-white/5 rounded-md"
+              className="md:hidden mr-3 p-2 text-white hover:text-primary flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg transition-colors drop-shadow-md"
               onClick={() => setIsMobileMenuOpen(true)}
             >
-              <span className="material-symbols-outlined text-[20px]">menu</span>
+              <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
             <Link href="/" className="hover:text-primary hidden sm:inline">ThreatMap</Link>
             <span className="text-[10px] text-white/20 hidden sm:inline">/</span>
@@ -243,8 +243,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span>API SERVER: /_/backend</span>
             </div>
 
-            {/* Notification Bell */}
-            <div className="relative">
+
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-on-surface-variant hover:text-white hover:bg-white/5 rounded-full transition-all"

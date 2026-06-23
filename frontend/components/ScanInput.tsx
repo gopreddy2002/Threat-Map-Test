@@ -171,13 +171,13 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
   return (
     <div className={`w-full max-w-4xl mx-auto glass-panel p-md rounded-xl transition-all duration-300 ${!isLoading ? 'scan-pulse-idle' : 'border-primary/50 shadow-[0_0_20px_rgba(20,184,166,0.3)]'}`}>
       {/* Tabs */}
-      <div className="flex flex-wrap bg-surface-container-low rounded-lg p-1 border border-white/5 mb-4 max-w-3xl mx-auto gap-1 justify-center">
+      <div className="flex flex-nowrap sm:flex-wrap bg-surface-container-low rounded-lg p-1 border border-white/5 mb-4 max-w-3xl mx-auto gap-1 justify-start sm:justify-center overflow-x-auto hide-scrollbar snap-x">
         {(Object.keys(tabConfig) as ScanType[]).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => handleTabChange(tab)}
-            className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 font-label-caps text-label-caps text-[12px] transition-all duration-150 min-w-[110px] ${
+            className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 font-label-caps text-label-caps text-[12px] transition-all duration-150 min-w-[110px] snap-center whitespace-nowrap flex-shrink-0 ${
               activeTab === tab
                 ? "bg-primary/20 text-primary border border-primary/20 shadow-lg"
                 : "text-on-surface-variant hover:text-on-surface hover:bg-white/5 border border-transparent"

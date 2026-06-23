@@ -307,7 +307,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       {/* Header Banner */}
       <div className="glass-panel p-md rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="material-symbols-outlined text-primary text-[24px]">
               {scan.type === "ip"
                 ? "sensors"
@@ -331,7 +331,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 </span>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight break-all font-mono-md select-all">
               {scan.indicator}
             </h2>

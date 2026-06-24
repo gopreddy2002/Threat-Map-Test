@@ -15,6 +15,8 @@ from services.greynoise import greynoise_service
 from services.alienvault import alienvault_service
 from services.risk_engine import risk_engine
 from services.ai_service import ai_service
+from services.whoisjson import whoisjson_service
+from services.domainscan import domainscan_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["IP Analysis"])
@@ -53,9 +55,11 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
             ipinfo_task = asyncio.wait_for(ipinfo_service.get_ip_info(ip), timeout=30.0)
             greynoise_task = asyncio.wait_for(greynoise_service.check_ip(ip), timeout=30.0)
             otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(ip, "ip"), timeout=8.0)
+            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(ip), timeout=30.0)
+            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(ip), timeout=30.0)
 
-            vt_res, abuse_res, ipinfo_res, gn_res, otx_res = await asyncio.gather(
-                vt_task, abuse_task, ipinfo_task, greynoise_task, otx_task,
+            vt_res, abuse_res, ipinfo_res, gn_res, otx_res, whoisjson_res, domainscan_res = await asyncio.gather(
+                vt_task, abuse_task, ipinfo_task, greynoise_task, otx_task, whoisjson_task, domainscan_task,
                 return_exceptions=True
             )
 
@@ -65,6 +69,8 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
             ipinfo_res = ipinfo_res if isinstance(ipinfo_res, dict) else ipinfo_service._get_fallback_data(ip)
             gn_res = gn_res if isinstance(gn_res, dict) else greynoise_service._get_fallback_data(ip)
             otx_res = otx_res if isinstance(otx_res, dict) else alienvault_service._get_fallback_data(ip)
+            whoisjson_res = whoisjson_res if not isinstance(whoisjson_res, Exception) else {}
+            domainscan_res = domainscan_res if not isinstance(domainscan_res, Exception) else {}
 
             logger.info(f"IPinfo for {ip}: {ipinfo_res.get('city')}, {ipinfo_res.get('country')} (status={ipinfo_res.get('status')})") 
 
@@ -92,6 +98,8 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
             "greynoise": gn_res,
             "ipinfo": ipinfo_res,
             "alienvault_otx": otx_res,
+            "whoisjson": whoisjson_res,
+            "domainscan": domainscan_res,
             "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }
 

@@ -12,6 +12,8 @@ import AdvancedOsintPanels from "@/components/AdvancedOsintPanels";
 import WebVulnReport from "@/components/WebVulnReport";
 import SpiderfootPanel from "@/components/SpiderfootPanel";
 import CommunityNotes from "@/components/CommunityNotes";
+import DomainScanMetrics from "@/components/DomainScanMetrics";
+import WhoisJsonData from "@/components/WhoisJsonData";
 import dynamic from "next/dynamic";
 import { Download, Plus, Check, Share2, Target, FileCode2, AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -776,6 +778,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
       {/* Advanced Live OSINT Telemetry */}
       <AdvancedOsintPanels scan={scan} />
+
+      {/* DomainScan Analytics */}
+      {scan.raw_data?.domainscan && (
+        <div className="mt-8">
+          <DomainScanMetrics data={scan.raw_data.domainscan} />
+        </div>
+      )}
+
+      {/* WhoisJSON Deep Inspection */}
+      {scan.raw_data?.whoisjson && (
+        <WhoisJsonData data={scan.raw_data.whoisjson} />
+      )}
 
       {/* SpiderFoot Deep OSINT Section */}
       <SpiderfootPanel target={scan.indicator} />

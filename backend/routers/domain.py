@@ -13,6 +13,8 @@ from services.alienvault import alienvault_service
 from services.osint import osint_service
 from services.risk_engine import risk_engine
 from services.ai_service import ai_service
+from services.whoisjson import whoisjson_service
+from services.domainscan import domainscan_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["Domain Analysis"])
@@ -45,9 +47,13 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
             dns_task = asyncio.wait_for(osint_service.get_dns_records(domain), timeout=30.0)
             whois_task = asyncio.wait_for(osint_service.get_whois_data(domain), timeout=30.0)
             ssl_task = asyncio.wait_for(osint_service.get_ssl_metadata(domain), timeout=30.0)
+            
+            # Advanced Analytical Tasks
+            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(domain), timeout=30.0)
+            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(domain), timeout=30.0)
 
-            vt_res, urlscan_res, otx_res, dns_res, whois_res, ssl_res = await asyncio.gather(
-                vt_task, urlscan_task, otx_task, dns_task, whois_task, ssl_task,
+            vt_res, urlscan_res, otx_res, dns_res, whois_res, ssl_res, whoisjson_res, domainscan_res = await asyncio.gather(
+                vt_task, urlscan_task, otx_task, dns_task, whois_task, ssl_task, whoisjson_task, domainscan_task,
                 return_exceptions=True
             )
 
@@ -57,6 +63,8 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
             dns_res = dns_res if not isinstance(dns_res, Exception) else {"A": [], "MX": [], "TXT": [], "NS": []}
             whois_res = whois_res if not isinstance(whois_res, Exception) else {"registrar": "Unknown", "creation_date": "", "expiration_date": "", "registrant_org": ""}
             ssl_res = ssl_res if not isinstance(ssl_res, Exception) else {"issuer": "Unknown", "subject": domain, "valid_from": "", "valid_to": "", "serial_number": "", "version": 3}
+            whoisjson_res = whoisjson_res if not isinstance(whoisjson_res, Exception) else {}
+            domainscan_res = domainscan_res if not isinstance(domainscan_res, Exception) else {}
 
         except Exception as e:
             logger.error(f"[domain] Parallel lookups failed: {e}", exc_info=True)
@@ -105,6 +113,8 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
             "dns_records": dns_res,
             "whois_records": whois_res,
             "ssl_metadata": ssl_res,
+            "whoisjson": whoisjson_res,
+            "domainscan": domainscan_res,
             "historical_whois_changes": whois_changes,
             "risk_confidence": {"score": risk_results.get("confidence_score", 0), "level": risk_results.get("confidence_level", "LOW")}
         }

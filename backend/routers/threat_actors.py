@@ -26,6 +26,6 @@ def get_threat_actors(db: Session = Depends(get_db)):
     return actors
 
 @router.post("/sync")
-async def trigger_sync(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    background_tasks.add_task(sync_threat_actors, db)
+async def trigger_sync(background_tasks: BackgroundTasks):
+    background_tasks.add_task(sync_threat_actors)
     return {"message": "MITRE ATT&CK sync started in background."}

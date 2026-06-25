@@ -1,18 +1,20 @@
 import httpx
 import logging
-from sqlalchemy.orm import Session
-from models.database import ThreatActor
+import logging
+from models.database import ThreatActor, SessionLocal
+import datetime
 import datetime
 
 logger = logging.getLogger(__name__)
 
 MITRE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
-async def sync_threat_actors(db: Session):
+async def sync_threat_actors():
     """
     Downloads the MITRE ATT&CK enterprise json and extracts Intrusion Sets (Threat Actors).
     Updates the database with the findings.
     """
+    db = SessionLocal()
     logger.info("Starting MITRE ATT&CK Threat Actor synchronization...")
     try:
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
@@ -70,3 +72,5 @@ async def sync_threat_actors(db: Session):
         
     except Exception as e:
         logger.error(f"Failed to sync MITRE ATT&CK data: {str(e)}")
+    finally:
+        db.close()

@@ -13,9 +13,8 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/export", tags=["Export Reports"])
@@ -465,6 +464,13 @@ class DriveUploadRequest(BaseModel):
 @router.post("/drive")
 def export_to_drive(request: DriveUploadRequest, db: Session = Depends(get_db)):
     """Uploads a generated PDF report directly to the user's Google Drive."""
+    try:
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseUpload
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Google Drive API dependencies not installed.")
+
     scan = db.query(Scan).filter(Scan.id == request.scan_id).first()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan record not found.")

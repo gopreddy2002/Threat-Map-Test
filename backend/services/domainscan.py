@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import ipaddress
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -13,12 +14,20 @@ class DomainScanService:
     async def get_scan_data(self, indicator: str) -> Dict[str, Any]:
         """
         Simulates fetching high-performance DomainScan diagnostic data.
+        Handles both domains and IPs.
         """
         try:
             # Simulate sub-second latency (~240ms)
             await asyncio.sleep(0.24)
 
             is_malicious = "malicious" in indicator.lower() or "phish" in indicator.lower()
+            
+            is_ip = False
+            try:
+                ipaddress.ip_address(indicator)
+                is_ip = True
+            except ValueError:
+                pass
             
             ai_score = random.randint(10, 40) if is_malicious else random.randint(70, 100)
             if ai_score >= 90:
@@ -42,8 +51,8 @@ class DomainScanService:
                 "ai_readiness": {
                     "score": ai_score,
                     "grade": grade,
-                    "robots_txt_present": not is_malicious,
-                    "sitemap_present": not is_malicious,
+                    "robots_txt_present": not is_malicious and not is_ip,
+                    "sitemap_present": not is_malicious and not is_ip,
                 },
                 "bot_access_matrix": {
                     "GPTBot": not is_malicious and random.choice([True, False]),
@@ -54,18 +63,24 @@ class DomainScanService:
                     "CCBot": not is_malicious and random.choice([True, False]),
                     "Anthropic-ai": not is_malicious and random.choice([True, False]),
                     "PerplexityBot": not is_malicious and random.choice([True, False]),
+                } if not is_ip else {
+                    "SSH_Open": random.choice([True, False]),
+                    "HTTP_Open": True,
+                    "HTTPS_Open": True,
+                    "FTP_Open": False,
+                    "SMTP_Open": False
                 },
                 "metadata_validation": {
-                    "has_title": True,
-                    "has_description": not is_malicious,
-                    "has_open_graph": not is_malicious,
-                    "has_twitter_cards": not is_malicious,
-                    "schema_org_types": ["WebSite", "Organization"] if not is_malicious else []
+                    "has_title": not is_ip,
+                    "has_description": not is_malicious and not is_ip,
+                    "has_open_graph": not is_malicious and not is_ip,
+                    "has_twitter_cards": not is_malicious and not is_ip,
+                    "schema_org_types": ["WebSite", "Organization"] if not is_malicious and not is_ip else []
                 },
                 "network_path_health": "Healthy - Direct Path" if not is_malicious else "Warning - Proxied/Obfuscated",
                 "live_browser_rendering": {
-                    "snapshot_status": "captured" if not is_malicious else "failed_timeout",
-                    "dom_elements_count": random.randint(50, 1500)
+                    "snapshot_status": "captured" if not is_malicious and not is_ip else "failed_timeout",
+                    "dom_elements_count": random.randint(50, 1500) if not is_ip else 0
                 }
             }
         except Exception as e:

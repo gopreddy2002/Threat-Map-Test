@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import ipaddress
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ class WhoisJsonService:
     async def get_domain_data(self, domain: str) -> Dict[str, Any]:
         """
         Simulates fetching comprehensive WHOIS/DNS data from WhoisJSON.
+        Handles both Domains and IPs.
         """
         try:
             # Simulate network latency (200-500ms)
@@ -20,17 +22,29 @@ class WhoisJsonService:
 
             is_malicious = "malicious" in domain.lower() or "phish" in domain.lower()
             
-            # Subdomains mock
+            is_ip = False
+            try:
+                ipaddress.ip_address(domain)
+                is_ip = True
+            except ValueError:
+                pass
+            
+            # Subdomains mock (only relevant for domains)
             subdomains = ["www", "mail", "api", "dev", "test", "staging", "admin"]
-            active_subs = random.sample(subdomains, random.randint(1, 5))
-            active_subs = [f"{sub}.{domain}" for sub in active_subs]
+            active_subs = []
+            if not is_ip:
+                active_subs = random.sample(subdomains, random.randint(1, 5))
+                active_subs = [f"{sub}.{domain}" for sub in active_subs]
+            else:
+                # Mock reverse DNS for IPs
+                active_subs = [f"crawl-{domain.replace('.', '-')}.googlebot.com" if not is_malicious else f"unknown-{domain.replace('.', '-')}.hacker.net"]
 
             return {
                 "status": "success",
                 "registrar_metadata": {
-                    "name": "Cloudflare, Inc." if not is_malicious else "Namecheap, Inc.",
+                    "name": "Cloudflare, Inc." if not is_ip and not is_malicious else ("ARIN (American Registry for Internet Numbers)" if is_ip else "Namecheap, Inc."),
                     "iana_id": "1337" if not is_malicious else "1068",
-                    "url": "http://www.cloudflare.com" if not is_malicious else "http://www.namecheap.com"
+                    "url": "http://www.cloudflare.com" if not is_ip and not is_malicious else ("https://www.arin.net" if is_ip else "http://www.namecheap.com")
                 },
                 "registry_dates": {
                     "creation_date": "2010-01-15T00:00:00Z" if not is_malicious else "2024-05-10T00:00:00Z",
@@ -41,23 +55,23 @@ class WhoisJsonService:
                     "clientTransferProhibited",
                     "clientUpdateProhibited",
                     "clientDeleteProhibited"
-                ],
+                ] if not is_ip else ["serverDeleteProhibited", "serverUpdateProhibited"],
                 "contacts": {
                     "registrant": {
-                        "name": "REDACTED FOR PRIVACY",
-                        "organization": "Privacy Protect, LLC",
-                        "email": "contact@privacyprotect.fake",
-                        "country": "IS"
+                        "name": "REDACTED FOR PRIVACY" if not is_ip else "Google LLC",
+                        "organization": "Privacy Protect, LLC" if not is_ip else "Google LLC",
+                        "email": "contact@privacyprotect.fake" if not is_ip else "network-abuse@google.com",
+                        "country": "IS" if not is_ip else "US"
                     },
                     "admin": {
-                        "name": "REDACTED FOR PRIVACY",
-                        "organization": "Privacy Protect, LLC",
-                        "email": "admin@privacyprotect.fake"
+                        "name": "REDACTED FOR PRIVACY" if not is_ip else "Google Cloud Support",
+                        "organization": "Privacy Protect, LLC" if not is_ip else "Google LLC",
+                        "email": "admin@privacyprotect.fake" if not is_ip else "admin@google.com"
                     },
                     "tech": {
-                        "name": "REDACTED FOR PRIVACY",
-                        "organization": "Privacy Protect, LLC",
-                        "email": "tech@privacyprotect.fake"
+                        "name": "REDACTED FOR PRIVACY" if not is_ip else "Google Network Engineering",
+                        "organization": "Privacy Protect, LLC" if not is_ip else "Google LLC",
+                        "email": "tech@privacyprotect.fake" if not is_ip else "noc@google.com"
                     }
                 },
                 "dns_records": {

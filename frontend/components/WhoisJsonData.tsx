@@ -16,6 +16,8 @@ export default function WhoisJsonData({ data }: WhoisJsonDataProps) {
   const contacts = data.contacts || {};
   const subs = data.active_subdomains || [];
   const reg = data.registrar_metadata || {};
+  const dates = data.registry_dates || {};
+  const epp = data.epp_status || [];
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -53,6 +55,37 @@ export default function WhoisJsonData({ data }: WhoisJsonDataProps) {
           <span className="text-xs text-on-surface-variant mt-1 truncate" title={data.ssl_tls_state?.issuer}>
             {data.ssl_tls_state?.issuer}
           </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+          <span className="text-[10px] text-on-surface-variant font-mono-sm uppercase mb-2 block">Lifecycle Dates</span>
+          <div className="grid grid-cols-3 gap-2">
+             <div className="flex flex-col">
+               <span className="text-[9px] text-on-surface-variant uppercase">Created</span>
+               <span className="text-xs text-white truncate">{dates.creation_date ? dates.creation_date.split('T')[0] : 'N/A'}</span>
+             </div>
+             <div className="flex flex-col">
+               <span className="text-[9px] text-on-surface-variant uppercase">Updated</span>
+               <span className="text-xs text-white truncate">{dates.updated_date ? dates.updated_date.split('T')[0] : 'N/A'}</span>
+             </div>
+             <div className="flex flex-col">
+               <span className="text-[9px] text-error uppercase font-bold">Expires</span>
+               <span className="text-xs text-white truncate">{dates.expiration_date ? dates.expiration_date.split('T')[0] : 'N/A'}</span>
+             </div>
+          </div>
+        </div>
+        <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+          <span className="text-[10px] text-on-surface-variant font-mono-sm uppercase mb-2 block">EPP Status Codes</span>
+          <div className="flex flex-wrap gap-2">
+            {epp.map((status: string, idx: number) => (
+               <span key={idx} className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-mono-sm">
+                 {status}
+               </span>
+            ))}
+            {epp.length === 0 && <span className="text-xs text-on-surface-variant">No EPP status codes found.</span>}
+          </div>
         </div>
       </div>
 
@@ -174,6 +207,7 @@ export default function WhoisJsonData({ data }: WhoisJsonDataProps) {
                         <p className="text-xs text-white truncate"><span className="text-on-surface-variant mr-1">Name:</span> {info.name || "N/A"}</p>
                         <p className="text-xs text-white truncate"><span className="text-on-surface-variant mr-1">Org:</span> {info.organization || "N/A"}</p>
                         <p className="text-xs text-white truncate"><span className="text-on-surface-variant mr-1">Email:</span> {info.email || "N/A"}</p>
+                        {info.country && <p className="text-xs text-white truncate"><span className="text-on-surface-variant mr-1">Country:</span> {info.country}</p>}
                       </div>
                     </div>
                   ))}

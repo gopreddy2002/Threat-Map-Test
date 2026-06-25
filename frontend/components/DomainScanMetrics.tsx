@@ -13,6 +13,7 @@ export default function DomainScanMetrics({ data }: DomainScanMetricsProps) {
   const bots = data.bot_access_matrix || {};
   const meta = data.metadata_validation || {};
   const perf = data.performance_metrics || {};
+  const render = data.live_browser_rendering || {};
 
   return (
     <div className="glass-panel rounded-xl p-md flex flex-col h-full border border-white/5">
@@ -55,12 +56,16 @@ export default function DomainScanMetrics({ data }: DomainScanMetricsProps) {
                 <span className="text-sm font-bold text-white font-mono-sm">{perf.latency_ms} ms</span>
               </div>
               <div className="bg-surface-container-low p-3 rounded-lg border border-white/5 flex flex-col gap-1">
+                <span className="text-[10px] text-on-surface-variant font-mono-sm">Server Delay</span>
+                <span className="text-sm font-bold text-white font-mono-sm">{perf.server_delay_ms} ms</span>
+              </div>
+              <div className="bg-surface-container-low p-3 rounded-lg border border-white/5 flex flex-col gap-1">
                 <span className="text-[10px] text-on-surface-variant font-mono-sm">HTTP Status</span>
                 <span className={`text-sm font-bold font-mono-sm ${perf.http_handshake_code === 200 ? 'text-emerald-400' : 'text-yellow-400'}`}>
                   {perf.http_handshake_code}
                 </span>
               </div>
-              <div className="bg-surface-container-low p-3 rounded-lg border border-white/5 flex flex-col gap-1 col-span-2">
+              <div className="bg-surface-container-low p-3 rounded-lg border border-white/5 flex flex-col gap-1">
                 <span className="text-[10px] text-on-surface-variant font-mono-sm">Network Path Health</span>
                 <span className={`text-xs font-bold ${data.network_path_health?.includes("Warning") ? 'text-error' : 'text-emerald-400'}`}>
                   {data.network_path_health}
@@ -106,6 +111,19 @@ export default function DomainScanMetrics({ data }: DomainScanMetricsProps) {
                   SCHEMA: {schema.toUpperCase()}
                 </div>
               ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <p className="text-[10px] text-on-surface-variant font-mono-sm uppercase mb-2">Live Browser Render</p>
+            <div className="bg-surface-container-low p-3 rounded-lg border border-white/5 flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                 <span className="material-symbols-outlined text-[16px] text-secondary">web</span>
+                 <span className="text-xs text-white font-mono-sm">DOM Elements: {render.dom_elements_count || 0}</span>
+               </div>
+               <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${render.snapshot_status === 'captured' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-error/10 text-error'}`}>
+                 {render.snapshot_status}
+               </span>
             </div>
           </div>
         </div>

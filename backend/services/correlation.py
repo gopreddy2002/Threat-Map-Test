@@ -30,8 +30,14 @@ def get_correlated_iocs(scan: Scan, db: Session) -> dict:
                 .filter(Scan.type == "ip", Scan.id != scan.id)
                 .all()
             )
+            seen_subnet = set()
             for s in related_scans:
+                if s.indicator == indicator:
+                    continue
+                if s.indicator in seen_subnet:
+                    continue
                 if s.indicator.startswith(subnet_prefix + "."):
+                    seen_subnet.add(s.indicator)
                     results["subnet_matches"].append({
                         "scan_id": s.id,
                         "indicator": s.indicator,
@@ -46,10 +52,16 @@ def get_correlated_iocs(scan: Scan, db: Session) -> dict:
         current_org = raw.get("ipinfo", {}).get("org", "")
         if current_org:
             all_ip_scans = db.query(Scan).filter(Scan.type == "ip", Scan.id != scan.id).all()
+            seen_asn = set()
             for s in all_ip_scans:
+                if s.indicator == indicator:
+                    continue
+                if s.indicator in seen_asn:
+                    continue
                 s_raw = s.raw_data or {}
                 s_org = s_raw.get("ipinfo", {}).get("org", "")
                 if s_org and s_org == current_org:
+                    seen_asn.add(s.indicator)
                     results["asn_matches"].append({
                         "scan_id": s.id,
                         "indicator": s.indicator,
@@ -77,7 +89,12 @@ def get_correlated_iocs(scan: Scan, db: Session) -> dict:
             .filter(Scan.type.in_(["domain", "url"]), Scan.id != scan.id)
             .all()
         )
+        seen_domain = set()
         for s in related:
+            if s.indicator == indicator:
+                continue
+            if s.indicator in seen_domain:
+                continue
             s_domain = s.indicator
             if s.type == "url":
                 try:
@@ -86,6 +103,7 @@ def get_correlated_iocs(scan: Scan, db: Session) -> dict:
                 except Exception:
                     pass
             if root in s_domain and s_domain != domain:
+                seen_domain.add(s.indicator)
                 results["domain_matches"].append({
                     "scan_id": s.id,
                     "indicator": s.indicator,

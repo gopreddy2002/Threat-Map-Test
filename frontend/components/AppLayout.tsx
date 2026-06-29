@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signIn, signOut } from "next-auth/react";
 import AnimatedBackground from "./AnimatedBackground";
+import NotificationBell from "./NotificationBell";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -244,53 +245,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
 
             {/* Notification Bell */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-on-surface-variant hover:text-white hover:bg-white/5 rounded-full transition-all"
-              >
-                <span className="material-symbols-outlined text-[20px]">notifications</span>
-                {alerts.length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full animate-pulse border border-background"></span>
-                )}
-              </button>
-
-              {/* Dropdown Menu */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-surface border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-surface-container-low">
-                    <span className="text-sm font-bold text-white font-headline-sm">Notifications</span>
-                    <span className="text-[10px] bg-error-container/20 text-error px-2 py-0.5 rounded font-mono-sm">
-                      {alerts.length} New
-                    </span>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto hide-scrollbar divide-y divide-white/5">
-                    {alerts.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-on-surface-variant font-mono-sm">
-                        No active alerts
-                      </div>
-                    ) : (
-                      alerts.map((alert) => (
-                        <div key={alert.id} className="p-4 hover:bg-white/5 transition-all">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <span className="text-xs font-bold text-white">{alert.title}</span>
-                            <span className="text-[9px] text-on-surface-variant font-mono-sm">
-                              {new Date(alert.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-on-surface-variant line-clamp-2">{alert.message}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="p-2 border-t border-white/5 bg-surface-container-lowest text-center">
-                    <Link href="/dashboard" prefetch={true} onClick={() => setShowNotifications(false)} className="text-[10px] text-primary hover:underline font-mono-sm uppercase tracking-wider">
-                      View Alert Center
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationBell />
 
             {/* Profile Dropdown */}
             <div className="relative">

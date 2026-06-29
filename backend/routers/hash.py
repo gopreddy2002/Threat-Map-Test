@@ -106,6 +106,14 @@ async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
             db.add(db_scan)
             db.commit()
             db.refresh(db_scan)
+            
+            from alert_service import trigger_alerts_if_needed
+            await trigger_alerts_if_needed(db, {
+                "indicator": db_scan.indicator,
+                "type": db_scan.type,
+                "risk_score": db_scan.risk_score,
+                "scan_id": db_scan.id,
+            })
         except Exception as dbe:
             db.rollback()
             logger.error(f"[hash] Failed to record hash scan: {dbe}")

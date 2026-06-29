@@ -191,6 +191,11 @@ Redis is implemented as an essential middleware. Every external API call (VirusT
     - **How it works:** Connects to a local SpiderFoot instance via its REST API.
     - **APIs:** SpiderFoot Local API.
 
+27. **Alert System**
+    - **What it does:** Automatically sends notifications when an IOC risk score crosses a predefined threshold.
+    - **How it works:** After the Risk Scoring Engine calculates the IOC risk score, the backend checks configured alert rules. If the score is equal to or greater than the threshold, alerts are generated through selected channels such as Email, Slack, Discord, Telegram, and Dashboard notifications.
+    - **Alert Channels:** Email alert, Slack webhook, Discord webhook, Telegram bot, Dashboard notification.
+    - **Expected Output:** Security analysts receive real-time warnings for high-risk IOCs, allowing faster triage, investigation, blocking, and incident response.
 ---
 
 ## 4. ALL DATA SOURCES & APIs

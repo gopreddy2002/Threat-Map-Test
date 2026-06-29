@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 
 export default function SigmaRuleGenerator() {
   const [ruleData, setRuleData] = useState({
+    id: `${Math.random().toString(36).substring(2, 10)}-${Math.random().toString(36).substring(2, 6)}-4444-8888-1234567890ab`,
     title: "Suspicious PowerShell Download",
     description: "Detects suspicious PowerShell download cradles",
     author: "ThreatMap",
@@ -18,9 +19,15 @@ export default function SigmaRuleGenerator() {
     level: "high"
   });
 
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const generateYaml = () => {
+    if (!mounted) return "";
     return `title: ${ruleData.title}
-id: ${Math.random().toString(36).substring(2, 10)}-${Math.random().toString(36).substring(2, 6)}-4444-8888-1234567890ab
+id: ${ruleData.id}
 description: ${ruleData.description}
 author: ${ruleData.author}
 date: ${ruleData.date}

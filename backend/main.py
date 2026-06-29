@@ -260,6 +260,24 @@ if campaigns:
 if notes:
     app.include_router(notes.router, prefix=settings.API_V1_STR)
 
+try:
+    from routers import incidents, attack_surface, ioc_graph, dark_web, malware, phishing, cve, geo_heatmap, evidence
+    app.include_router(incidents.router, prefix=settings.API_V1_STR)
+    app.include_router(attack_surface.router, prefix=settings.API_V1_STR)
+    app.include_router(ioc_graph.router, prefix=settings.API_V1_STR)
+    app.include_router(dark_web.router, prefix=settings.API_V1_STR)
+    app.include_router(malware.router, prefix=settings.API_V1_STR)
+    app.include_router(phishing.router, prefix=settings.API_V1_STR)
+    app.include_router(cve.router, prefix=settings.API_V1_STR)
+    app.include_router(geo_heatmap.router, prefix=settings.API_V1_STR)
+    app.include_router(evidence.router, prefix=settings.API_V1_STR)
+    print("New 10 feature routers imported OK")
+except Exception as e:
+    print(f"New routers failed: {e}")
+    import traceback
+    traceback.print_exc()
+
+
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors
 from services.correlation import get_correlated_iocs

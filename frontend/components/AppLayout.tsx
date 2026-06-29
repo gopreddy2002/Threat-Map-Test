@@ -72,6 +72,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: <span className="material-symbols-outlined text-[20px]">rule</span>,
     },
     {
+      name: "Case Management",
+      href: "/cases",
+      icon: <span className="material-symbols-outlined text-[20px]">folder_special</span>,
+    },
+    {
       name: "Standalone Tools",
       href: "/tools",
       icon: <span className="material-symbols-outlined text-[20px]">build</span>,
@@ -100,6 +105,56 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       name: "Bulk Analytics",
       href: "/results/bulk",
       icon: <span className="material-symbols-outlined text-[20px]">table_chart</span>,
+    },
+    {
+      name: "Incident Board",
+      href: "/incident-board",
+      icon: <span className="material-symbols-outlined text-[20px]">assignment</span>,
+    },
+    {
+      name: "Attack Surface",
+      href: "/attack-surface",
+      icon: <span className="material-symbols-outlined text-[20px]">radar</span>,
+    },
+    {
+      name: "IOC Graph",
+      href: "/ioc-graph",
+      icon: <span className="material-symbols-outlined text-[20px]">hub</span>,
+    },
+    {
+      name: "Threat Campaigns",
+      href: "/threat-campaigns",
+      icon: <span className="material-symbols-outlined text-[20px]">track_changes</span>,
+    },
+    {
+      name: "Dark Web",
+      href: "/dark-web",
+      icon: <span className="material-symbols-outlined text-[20px]">visibility_off</span>,
+    },
+    {
+      name: "Malware Explorer",
+      href: "/malware-explorer",
+      icon: <span className="material-symbols-outlined text-[20px]">pest_control</span>,
+    },
+    {
+      name: "Phishing Analyzer",
+      href: "/phishing-analyzer",
+      icon: <span className="material-symbols-outlined text-[20px]">phishing</span>,
+    },
+    {
+      name: "CVE Checker",
+      href: "/cve-checker",
+      icon: <span className="material-symbols-outlined text-[20px]">security</span>,
+    },
+    {
+      name: "Geo Heatmap",
+      href: "/geo-heatmap",
+      icon: <span className="material-symbols-outlined text-[20px]">map</span>,
+    },
+    {
+      name: "Evidence Locker",
+      href: "/evidence-locker",
+      icon: <span className="material-symbols-outlined text-[20px]">inventory_2</span>,
     },
     {
       name: "About",

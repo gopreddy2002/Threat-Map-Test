@@ -67,6 +67,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: <span className="material-symbols-outlined text-[20px]">analytics</span>,
     },
     {
+      name: "Sigma Rules",
+      href: "/sigma",
+      icon: <span className="material-symbols-outlined text-[20px]">rule</span>,
+    },
+    {
       name: "Case Management",
       href: "/cases",
       icon: <span className="material-symbols-outlined text-[20px]">folder_special</span>,

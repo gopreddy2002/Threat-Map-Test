@@ -19,6 +19,8 @@ try:
     from core.config import settings
     from models.database import init_db, get_db, Scan, Watchlist, Alert
     from models.schemas import DashboardStats
+    from alert_models import AlertRule, AlertNotification
+    from alert_routes import router as alert_router
     print("Core imports OK")
 except Exception as e:
     print(f"Core import error: {e}")
@@ -224,6 +226,8 @@ if chat:
     app.include_router(chat.router, prefix=settings.API_V1_STR)
 if tools:
     app.include_router(tools.router, prefix=settings.API_V1_STR)
+if alert_router:
+    app.include_router(alert_router)
 
 try:
     from routers import threat_actors

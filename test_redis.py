@@ -1,7 +1,9 @@
 import redis
 import time
 
-url = "redis://default:gQAAAAAAAZdnAAIgcDI0YjFiMjBhNmY3ZTA0MzU0YjI4NDc2OTRlOGRmNGJhNQ@flexible-urchin-104295.upstash.io:6379"
+import os
+
+url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 print("Connecting to Redis...")
 start = time.time()
 try:

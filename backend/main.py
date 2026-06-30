@@ -100,6 +100,14 @@ except Exception as e:
     traceback.print_exc()
     tools = None
 
+try:
+    from routers import bulk_upload
+    print("bulk_upload router imported OK")
+except Exception as e:
+    print(f"bulk_upload router failed: {e}")
+    traceback.print_exc()
+    bulk_upload = None
+
 # Setup logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -259,6 +267,8 @@ if campaigns:
     app.include_router(campaigns.router, prefix=settings.API_V1_STR)
 if notes:
     app.include_router(notes.router, prefix=settings.API_V1_STR)
+if bulk_upload:
+    app.include_router(bulk_upload.router, prefix=settings.API_V1_STR)
 
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors

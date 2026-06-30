@@ -97,6 +97,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: <span className="material-symbols-outlined text-[20px]">table_chart</span>,
     },
     {
+      name: "Bulk Upload",
+      href: "/bulk-upload",
+      icon: <span className="material-symbols-outlined text-[20px]">upload_file</span>,
+    },
+    {
       name: "About",
       href: "/about",
       icon: <span className="material-symbols-outlined text-[20px]">info</span>,

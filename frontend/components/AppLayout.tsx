@@ -19,6 +19,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isDarkMode, setIsDarkMode] = React.useState(true);
+  
+  // 5 Features States
+  const [currentTime, setCurrentTime] = React.useState<string>("");
+  const [isOnline, setIsOnline] = React.useState<boolean>(true);
+  const [showScrollTop, setShowScrollTop] = React.useState<boolean>(false);
+
   const { data: session } = useSession();
 
   React.useEffect(() => {
@@ -49,6 +55,47 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       }).catch(err => console.error(err));
     });
   }, [pathname]);
+
+  // Feature 1: Live Clock
+  React.useEffect(() => {
+    const updateTime = () => setCurrentTime(new Date().toLocaleTimeString());
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Feature 3: Network Status
+  React.useEffect(() => {
+    setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Feature 4: Keyboard shortcut Ctrl+/
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "/") {
+        e.preventDefault();
+        setIsMobileMenuOpen(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Feature 2: Dynamic Greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   const navigation = [
     {
@@ -256,6 +303,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </button>
           
           <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#adc6ff]' : 'bg-red-500'} ${isOnline ? 'animate-ping' : ''}`} />
+            <span>NETWORK: {isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+          </div>
+          <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
+            <span className="material-symbols-outlined text-[12px]">schedule</span>
+            <span>{currentTime || "Loading..."}</span>
+          </div>
+          <div className="flex items-center gap-2.5 px-2 text-[10px] font-mono-sm tracking-wide text-on-surface-variant">
             <div className="w-2 h-2 rounded-full bg-[#adc6ff] animate-ping" />
             <span>DB ENGINE: CONNECTED</span>
           </div>
@@ -264,7 +319,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <span>API AGENT: ONLINE</span>
           </div>
           <div className="text-[9px] text-on-surface-variant/40 text-center font-mono-sm pt-2">
-            v{process.env.NEXT_PUBLIC_VERSION || "1.0.0"} - ThreatMap
+            v{process.env.NEXT_PUBLIC_VERSION || "1.0.0"} - ThreatMap <br/>
+            (Ctrl+/ to toggle sidebar)
           </div>
         </div>
       </aside>
@@ -332,6 +388,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     {session ? (
                       <>
                         <div className="px-4 py-3 border-b border-white/5 bg-surface-container-low">
+                          <p className="text-xs text-primary mb-1 font-medium">{getGreeting()}!</p>
                           <p className="text-sm font-semibold text-white truncate">{session.user?.name}</p>
                           <p className="text-xs text-on-surface-variant truncate">{session.user?.email}</p>
                         </div>
@@ -364,7 +421,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Content Portal */}
-        <main className="flex-1 overflow-y-auto p-lg relative bg-transparent z-10">
+        <main 
+          id="main-scroll-container"
+          onScroll={(e) => setShowScrollTop(e.currentTarget.scrollTop > 300)}
+          className="flex-1 overflow-y-auto p-lg relative bg-transparent z-10"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -379,6 +440,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Feature 5: Scroll to Top */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            onClick={() => document.getElementById("main-scroll-container")?.scrollTo({ top: 0, behavior: "smooth" })}
+            className="fixed bottom-8 right-8 p-3 bg-primary text-black rounded-full shadow-lg hover:bg-primary/90 transition-all z-50 flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined">arrow_upward</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

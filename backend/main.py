@@ -86,11 +86,13 @@ except Exception as e:
 
 try:
     from routers import chat
-    print("chat router imported OK")
+    from routers import ai_copilot
+    print("chat and ai_copilot routers imported OK")
 except Exception as e:
-    print(f"chat router failed: {e}")
+    print(f"chat/ai_copilot router failed: {e}")
     traceback.print_exc()
     chat = None
+    ai_copilot = None
 
 try:
     from routers import tools
@@ -224,6 +226,8 @@ if spiderfoot:
     app.include_router(spiderfoot.router, prefix=settings.API_V1_STR)
 if chat:
     app.include_router(chat.router, prefix=settings.API_V1_STR)
+if ai_copilot:
+    app.include_router(ai_copilot.router, prefix=settings.API_V1_STR)
 if tools:
     app.include_router(tools.router, prefix=settings.API_V1_STR)
 if alert_router:

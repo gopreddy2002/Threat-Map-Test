@@ -109,3 +109,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+class AICopilotConversation(Base):
+    __tablename__ = "ai_copilot_conversations"
+
+    id = Column(String(36), primary_key=True, index=True)
+    session_id = Column(String(255), index=True, nullable=False)
+    prompt = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)
+    uploaded_file = Column(Text, nullable=True) # Could be filename or json dump of extracted text
+    confidence_score = Column(Integer, default=0)
+    conversation_summary = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True)

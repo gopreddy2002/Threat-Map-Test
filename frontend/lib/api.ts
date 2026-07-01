@@ -295,4 +295,55 @@ export const api = {
     const response = await apiClient.get(`/tools/http-headers`, { params: { url } });
     return response.data;
   },
+
+  // Bulk Upload Methods
+  uploadBulkFile: async (
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<{
+    total: number;
+    imported: number;
+    duplicates: number;
+    invalid: number;
+    errors: string[];
+  }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.post("/bulk-upload/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onProgress(percentCompleted);
+        }
+      },
+    });
+    return response.data;
+  },
+
+  getBulkIndicators: async (params: {
+    page: number;
+    size: number;
+    search?: string;
+    sort_by?: string;
+    order?: string;
+  }): Promise<{
+    items: any[];
+    total: number;
+    page: number;
+    size: number;
+    pages: number;
+  }> => {
+    const response = await apiClient.get("/bulk-upload/indicators", { params });
+    return response.data;
+  },
+
+  getBulkTemplateUrl: (): string => {
+    return `${API_BASE_URL}/bulk-upload/template`;
+  },
 };
+

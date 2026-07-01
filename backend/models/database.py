@@ -100,6 +100,133 @@ class CommunityNote(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+class IncidentCase(Base):
+    __tablename__ = "incident_cases"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(50), default="Open") # Open, Investigating, Resolved
+    priority = Column(String(50), default="Medium") # Low, Medium, High, Critical
+    reporter = Column(String(100), default="System")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class AttackSurfaceAsset(Base):
+    __tablename__ = "attack_surface_assets"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    domain = Column(String(255), index=True, nullable=False)
+    ips = Column(JSON, nullable=True) # list of IPs
+    open_ports = Column(JSON, nullable=True) # list of open ports
+    technologies = Column(JSON, nullable=True) # list of detected tech
+    last_scanned = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DarkWebMention(Base):
+    __tablename__ = "dark_web_mentions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    keyword = Column(String(255), index=True, nullable=False)
+    source = Column(String(255), nullable=True)
+    snippet = Column(Text, nullable=True)
+    date_found = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class MalwareFamily(Base):
+    __tablename__ = "malware_families"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), index=True, nullable=False)
+    aliases = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
+    indicators = Column(JSON, nullable=True) # associated hashes/domains
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class EvidenceFile(Base):
+    __tablename__ = "evidence_files"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    filename = Column(String(255), nullable=False)
+    file_path = Column(String(1000), nullable=False)
+    uploader = Column(String(100), default="Analyst")
+    incident_id = Column(Integer, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class ThreatIntelBriefing(Base):
+    __tablename__ = "threat_intel_briefings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    risk_score = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DomainReputationHistory(Base):
+    __tablename__ = "domain_reputation_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    domain = Column(String(255), index=True, nullable=False)
+    risk_score = Column(Integer, default=0)
+    categories = Column(JSON, nullable=True)
+    whois_summary = Column(Text, nullable=True)
+    scan_date = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class MitreTechnique(Base):
+    __tablename__ = "mitre_techniques"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    technique_id = Column(String(50), index=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    tactics = Column(JSON, nullable=True)
+    severity = Column(String(50), default="Medium")
+    description = Column(Text, nullable=True)
+    mitigation = Column(Text, nullable=True)
+
+
+class IOCTracker(Base):
+    __tablename__ = "ioc_tracker"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    indicator = Column(String(255), index=True, nullable=False)
+    type = Column(String(50), nullable=False)
+    confidence_score = Column(Integer, default=50)
+    first_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    expiry_date = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    source = Column(String(255), nullable=True)
+
+
+class AttackPath(Base):
+    __tablename__ = "attack_paths"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    steps = Column(JSON, nullable=True) # node/edge graph data
+    risk_level = Column(String(50), default="High")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class RemediationPlaybook(Base):
+    __tablename__ = "remediation_playbooks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    steps = Column(JSON, nullable=True)
+    owner = Column(String(100), default="Security Team")
+    priority = Column(String(50), default="Medium")
+    status = Column(String(50), default="Active")
+    threat_type = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

@@ -145,3 +145,80 @@ class EvidenceFileResponse(EvidenceFileBase):
     id: int
     uploaded_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class ThreatIntelBriefingBase(BaseModel):
+    title: str
+    content: str
+    risk_score: Optional[int] = 0
+
+class ThreatIntelBriefingResponse(ThreatIntelBriefingBase):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DomainReputationHistoryBase(BaseModel):
+    domain: str
+    risk_score: Optional[int] = 0
+    categories: Optional[List[str]] = []
+    whois_summary: Optional[str] = None
+
+class DomainReputationHistoryResponse(DomainReputationHistoryBase):
+    id: int
+    scan_date: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MitreTechniqueBase(BaseModel):
+    technique_id: str
+    name: str
+    tactics: Optional[List[str]] = []
+    severity: Optional[str] = "Medium"
+    description: Optional[str] = None
+    mitigation: Optional[str] = None
+
+class MitreTechniqueResponse(MitreTechniqueBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class IOCTrackerBase(BaseModel):
+    indicator: str
+    type: str
+    confidence_score: Optional[int] = 50
+    expiry_date: Optional[datetime] = None
+    is_active: Optional[bool] = True
+    source: Optional[str] = None
+
+class IOCTrackerResponse(IOCTrackerBase):
+    id: int
+    first_seen: datetime
+    last_seen: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AttackPathBase(BaseModel):
+    title: str
+    steps: Optional[Dict[str, Any]] = None
+    risk_level: Optional[str] = "High"
+
+class AttackPathResponse(AttackPathBase):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RemediationPlaybookBase(BaseModel):
+    title: str
+    steps: Optional[List[Dict[str, Any]]] = []
+    owner: Optional[str] = "Security Team"
+    priority: Optional[str] = "Medium"
+    status: Optional[str] = "Active"
+    threat_type: Optional[str] = None
+
+class RemediationPlaybookResponse(RemediationPlaybookBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)

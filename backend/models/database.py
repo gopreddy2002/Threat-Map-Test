@@ -156,6 +156,77 @@ class EvidenceFile(Base):
     uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+class ThreatIntelBriefing(Base):
+    __tablename__ = "threat_intel_briefings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    risk_score = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DomainReputationHistory(Base):
+    __tablename__ = "domain_reputation_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    domain = Column(String(255), index=True, nullable=False)
+    risk_score = Column(Integer, default=0)
+    categories = Column(JSON, nullable=True)
+    whois_summary = Column(Text, nullable=True)
+    scan_date = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class MitreTechnique(Base):
+    __tablename__ = "mitre_techniques"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    technique_id = Column(String(50), index=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    tactics = Column(JSON, nullable=True)
+    severity = Column(String(50), default="Medium")
+    description = Column(Text, nullable=True)
+    mitigation = Column(Text, nullable=True)
+
+
+class IOCTracker(Base):
+    __tablename__ = "ioc_tracker"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    indicator = Column(String(255), index=True, nullable=False)
+    type = Column(String(50), nullable=False)
+    confidence_score = Column(Integer, default=50)
+    first_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.datetime.utcnow)
+    expiry_date = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    source = Column(String(255), nullable=True)
+
+
+class AttackPath(Base):
+    __tablename__ = "attack_paths"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    steps = Column(JSON, nullable=True) # node/edge graph data
+    risk_level = Column(String(50), default="High")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class RemediationPlaybook(Base):
+    __tablename__ = "remediation_playbooks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    steps = Column(JSON, nullable=True)
+    owner = Column(String(100), default="Security Team")
+    priority = Column(String(50), default="Medium")
+    status = Column(String(50), default="Active")
+    threat_type = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

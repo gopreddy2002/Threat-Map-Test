@@ -345,5 +345,20 @@ export const api = {
   getBulkTemplateUrl: (): string => {
     return `${API_BASE_URL}/bulk-upload/template`;
   },
+
+  getAttackPrediction: async () => {
+    const response = await apiClient.get("/dashboard/prediction/");
+    return response.data;
+  },
+
+  getCountryComparison: async (countryA: string, countryB: string) => {
+    const response = await apiClient.get("/compare/countries/", {
+      params: {
+        country_a: countryA,
+        country_b: countryB,
+      },
+    });
+    return response.data;
+  },
 };
 

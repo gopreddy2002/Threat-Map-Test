@@ -311,6 +311,15 @@ except Exception as e:
     print(f"New 9 additional feature routers failed: {e}")
     traceback.print_exc()
 
+try:
+    from routers import prediction, threat_compare
+    app.include_router(prediction.router, prefix=settings.API_V1_STR)
+    app.include_router(threat_compare.router, prefix=settings.API_V1_STR)
+    print("Antigravity features (prediction & threat_compare) routers imported OK")
+except Exception as e:
+    print(f"Antigravity features routers failed: {e}")
+    traceback.print_exc()
+
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors
 from services.correlation import get_correlated_iocs

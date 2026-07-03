@@ -149,6 +149,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: <span className="material-symbols-outlined text-[20px]">compare_arrows</span>,
     },
     {
+      name: "Threat Comparison",
+      href: "/compare-threats",
+      icon: <span className="material-symbols-outlined text-[20px]">compare</span>,
+    },
+    {
+      name: "Security Quiz",
+      href: "/quiz",
+      icon: <span className="material-symbols-outlined text-[20px]">quiz</span>,
+    },
+    {
       name: "Bulk Analytics",
       href: "/results/bulk",
       icon: <span className="material-symbols-outlined text-[20px]">table_chart</span>,
@@ -352,6 +362,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 ? "IOC Scanner"
                 : pathname === "/dashboard"
                 ? "Dashboard Telemetry"
+                : pathname === "/compare-threats"
+                ? "Threat Comparison"
+                : pathname === "/quiz"
+                ? "Security Quiz"
                 : pathname === "/watchlist"
                 ? "Watchlist & Alerts"
                 : pathname === "/about"

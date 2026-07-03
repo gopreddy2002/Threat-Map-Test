@@ -51,7 +51,13 @@ export default function Dashboard() {
     staleTime: 60000,
   });
 
-  const loading = statsLoading || activityLoading || topIocsLoading || apiHealthLoading;
+  const { data: prediction, isLoading: predictionLoading } = useQuery({
+    queryKey: ['attackPrediction'],
+    queryFn: () => api.getAttackPrediction(),
+    staleTime: 30000,
+  });
+
+  const loading = statsLoading || activityLoading || topIocsLoading || apiHealthLoading || predictionLoading;
   const error = statsError ? "Failed to fetch telemetry metrics from backend." : "";
 
   const dismissMutation = useMutation({
@@ -117,6 +123,7 @@ export default function Dashboard() {
             queryClient.invalidateQueries({ queryKey: ['scanActivity'] });
             queryClient.invalidateQueries({ queryKey: ['topIocs'] });
             queryClient.invalidateQueries({ queryKey: ['apiHealth'] });
+            queryClient.invalidateQueries({ queryKey: ['attackPrediction'] });
           }}
           disabled={loading}
           className="bg-surface-container-low border border-white/10 hover:bg-white/5 text-white py-1.5 px-4 rounded-lg text-[11px] font-bold font-mono-sm flex items-center gap-2 transition-all disabled:opacity-50 hover:border-primary/50 hover:text-primary"
@@ -286,8 +293,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Split Row: API Health, Risk Allocation, Incident Alert Center */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Split Row: API Health, Risk Allocation, Incident Alert Center, and Cyber Attack Prediction */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Left 1 Span: API Health Status */}
         <div className="glass-panel p-lg rounded-xl flex flex-col justify-between">
@@ -334,6 +341,64 @@ export default function Dashboard() {
               totalScans={stats.total_scans_24h}
             />
           </div>
+        </div>
+
+        {/* Cyber Attack Prediction Card */}
+        <div className="glass-panel p-lg rounded-xl flex flex-col justify-between">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-2 mb-4">
+            <span className="material-symbols-outlined text-primary text-[20px]">online_prediction</span>
+            <h3 className="font-bold text-white text-md font-headline-sm">Attack Prediction</h3>
+          </div>
+
+          {prediction ? (
+            <div className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono-sm text-on-surface-variant uppercase">Predicted Threat Type</span>
+                  <div className="text-sm font-bold text-white flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                    {prediction.predicted_attack_type}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono-sm text-on-surface-variant uppercase">Target Focus Area</span>
+                  <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-[14px]">public</span>
+                    {prediction.predicted_target_region}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono-sm text-on-surface-variant uppercase block">Confidence</span>
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                      prediction.confidence_level === 'High' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      prediction.confidence_level === 'Medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {prediction.confidence_level}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono-sm text-on-surface-variant uppercase block">Timeframe</span>
+                    <span className="text-xs font-bold text-primary font-mono-sm">
+                      {prediction.estimated_time}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-white/5 bg-surface-container-low/30 p-2.5 rounded border border-white/5">
+                <p className="text-[11px] leading-relaxed text-on-surface-variant italic">
+                  "{prediction.explanation}"
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-on-surface-variant text-center py-4">No prediction computed</div>
+          )}
         </div>
 
         {/* Right 1 Span: Incident Alert Center */}

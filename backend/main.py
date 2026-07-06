@@ -214,6 +214,9 @@ async def websocket_live_feed(websocket: WebSocket):
 
 
 # Health Check (fast in-memory ping, no DB)
+@app.get(f"{settings.API_V1_STR}/health")
+async def health_check():
+    return {"status": "ok", "message": "ThreatMap API is running normally."}
 
 # Include Routers ONLY if they imported correctly
 if ip:

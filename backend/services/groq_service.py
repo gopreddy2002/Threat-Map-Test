@@ -4,8 +4,12 @@ from core.config import settings
 
 # Initialize the Groq client. It will automatically pick up GROQ_API_KEY from environment variables if set,
 # or we can pass it explicitly.
-client = Groq(api_key=settings.GROQ_API_KEY)
-
+client = None
+try:
+    if settings.GROQ_API_KEY:
+        client = Groq(api_key=settings.GROQ_API_KEY)
+except Exception:
+    pass
 AVAILABLE_MODELS = {
     "llama-3.3-70b-versatile": "Llama 3.3 70B (Legacy)",
     "openai/gpt-oss-120b": "GPT-OSS 120B (Recommended)",
@@ -14,6 +18,8 @@ AVAILABLE_MODELS = {
 }
 
 async def chat_with_ai(message: str, history: list = [], model: str = "openai/gpt-oss-120b"):
+    if not client:
+        return "Error: GROQ_API_KEY is not configured. AI chat is unavailable."
     try:
         SYSTEM_PROMPT = """You are ThreatMap AI. 
 Format your responses using proper Markdown:
@@ -49,6 +55,8 @@ Format your responses using proper Markdown:
         return f"Error with {model}: {str(e)}"
 
 async def chat_with_image(message: str, base64_image: str):
+    if not client:
+        return "Error: GROQ_API_KEY is not configured. Vision AI is unavailable."
     try:
         # Use exact model requested by user
         model = "meta-llama/llama-4-scout-17b-16e-instruct"

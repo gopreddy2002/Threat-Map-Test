@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function AttackSurfacePage() {
   const [assets, setAssets] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function AttackSurfacePage() {
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/v1/attack-surface/");
+        const response = await fetch(`${API_BASE_URL}/attack-surface/`);
         if (!response.ok) throw new Error("Failed to fetch attack surface assets");
         const data = await response.json();
         setAssets(data);

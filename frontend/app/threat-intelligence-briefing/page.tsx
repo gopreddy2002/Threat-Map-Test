@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function ThreatIntelligenceBriefingPage() {
   const [briefings, setBriefings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/v1/threat-intel/")
+    fetch(`${API_BASE_URL}/threat-intel/`)
       .then(res => res.json())
       .then(data => setBriefings(data))
       .catch(console.error)

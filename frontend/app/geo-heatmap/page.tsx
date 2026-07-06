@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function GeoHeatmapPage() {
   const [data, setData] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function GeoHeatmapPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/v1/geo-heatmap/");
+        const response = await fetch(`${API_BASE_URL}/geo-heatmap/`);
         if (!response.ok) throw new Error("Failed to fetch geo heatmap data");
         const json = await response.json();
         setData(json);

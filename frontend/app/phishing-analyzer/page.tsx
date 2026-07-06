@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function PhishingAnalyzerPage() {
   const [url, setUrl] = useState("");
@@ -14,7 +15,7 @@ export default function PhishingAnalyzerPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/phishing/analyze?url=${encodeURIComponent(url)}`, { method: "POST" });
+      const response = await fetch(`${API_BASE_URL}/phishing/analyze?url=${encodeURIComponent(url)}`, { method: "POST" });
       if (!response.ok) throw new Error("Failed to analyze URL");
       const data = await response.json();
       setResult(data);

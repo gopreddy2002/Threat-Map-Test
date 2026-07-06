@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function EmailAnalyzerPage() {
   const [headers, setHeaders] = useState("");
@@ -11,7 +12,7 @@ export default function EmailAnalyzerPage() {
     if (!headers) return;
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/email-analyzer/analyze", {
+      const res = await fetch(`${API_BASE_URL}/email-analyzer/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ headers })

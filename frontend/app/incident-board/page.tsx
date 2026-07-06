@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function IncidentBoardPage() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function IncidentBoardPage() {
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/v1/incidents/");
+        const response = await fetch(`${API_BASE_URL}/incidents/`);
         if (!response.ok) throw new Error("Failed to fetch incidents");
         const data = await response.json();
         setIncidents(data);

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { api } from "@/lib/api";
 
 export default function ThreatCampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -11,9 +12,7 @@ export default function ThreatCampaignsPage() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/v1/campaigns/");
-        if (!response.ok) throw new Error("Failed to fetch campaigns");
-        const data = await response.json();
+        const data = await api.getCampaigns();
         setCampaigns(data);
       } catch (err: any) {
         setError(err.message);

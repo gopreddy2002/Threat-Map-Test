@@ -5,7 +5,7 @@ let base = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_U
 if (base && base.startsWith('http') && !base.endsWith('/api/v1')) {
     base = base.replace(/\/$/, '') + '/api/v1';
 }
-const API_BASE_URL = base;
+export const API_BASE_URL = base;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

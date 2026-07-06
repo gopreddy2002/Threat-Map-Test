@@ -1,13 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function ExecutiveSummaryPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/v1/executive-summary/")
+    fetch(`${API_BASE_URL}/executive-summary/`)
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(console.error)

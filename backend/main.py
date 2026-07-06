@@ -86,13 +86,11 @@ except Exception as e:
 
 try:
     from routers import chat
-    from routers import ai_copilot
-    print("chat and ai_copilot routers imported OK")
+    print("chat router imported OK")
 except Exception as e:
-    print(f"chat/ai_copilot router failed: {e}")
+    print(f"chat router failed: {e}")
     traceback.print_exc()
     chat = None
-    ai_copilot = None
 
 try:
     from routers import tools
@@ -237,8 +235,6 @@ if spiderfoot:
     app.include_router(spiderfoot.router, prefix=settings.API_V1_STR)
 if chat:
     app.include_router(chat.router, prefix=settings.API_V1_STR)
-if ai_copilot:
-    app.include_router(ai_copilot.router, prefix=settings.API_V1_STR)
 if tools:
     app.include_router(tools.router, prefix=settings.API_V1_STR)
 if alert_router:
@@ -277,51 +273,7 @@ if notes:
 if bulk_upload:
     app.include_router(bulk_upload.router, prefix=settings.API_V1_STR)
 
-try:
-    from routers import incidents, attack_surface, ioc_graph, dark_web, malware, phishing, cve, geo_heatmap, evidence
-    app.include_router(incidents.router, prefix=settings.API_V1_STR)
-    app.include_router(attack_surface.router, prefix=settings.API_V1_STR)
-    app.include_router(ioc_graph.router, prefix=settings.API_V1_STR)
-    app.include_router(dark_web.router, prefix=settings.API_V1_STR)
-    app.include_router(malware.router, prefix=settings.API_V1_STR)
-    app.include_router(phishing.router, prefix=settings.API_V1_STR)
-    app.include_router(cve.router, prefix=settings.API_V1_STR)
-    app.include_router(geo_heatmap.router, prefix=settings.API_V1_STR)
-    app.include_router(evidence.router, prefix=settings.API_V1_STR)
-    print("New 10 feature routers imported OK")
-except Exception as e:
-    print(f"New routers failed: {e}")
-    import traceback
-    traceback.print_exc()
 
-try:
-    from routers import (
-        threat_intel, email_analyzer, domain_reputation_history,
-        mitre_navigator, alert_prioritizer, ioc_tracker, attack_path,
-        remediation_playbooks, executive_summary
-    )
-    app.include_router(threat_intel.router, prefix=settings.API_V1_STR + "/threat-intel", tags=["Threat Intel"])
-    app.include_router(email_analyzer.router, prefix=settings.API_V1_STR + "/email-analyzer", tags=["Email Analyzer"])
-    app.include_router(domain_reputation_history.router, prefix=settings.API_V1_STR + "/domain-reputation", tags=["Domain Reputation"])
-    app.include_router(mitre_navigator.router, prefix=settings.API_V1_STR + "/mitre", tags=["MITRE"])
-    app.include_router(alert_prioritizer.router, prefix=settings.API_V1_STR + "/alert-prioritizer", tags=["Alerts"])
-    app.include_router(ioc_tracker.router, prefix=settings.API_V1_STR + "/ioc-tracker", tags=["IOC Tracker"])
-    app.include_router(attack_path.router, prefix=settings.API_V1_STR + "/attack-path", tags=["Attack Path"])
-    app.include_router(remediation_playbooks.router, prefix=settings.API_V1_STR + "/playbooks", tags=["Playbooks"])
-    app.include_router(executive_summary.router, prefix=settings.API_V1_STR + "/executive-summary", tags=["Executive Summary"])
-    print("New 9 additional feature routers imported OK")
-except Exception as e:
-    print(f"New 9 additional feature routers failed: {e}")
-    traceback.print_exc()
-
-try:
-    from routers import prediction, threat_compare
-    app.include_router(prediction.router, prefix=settings.API_V1_STR)
-    app.include_router(threat_compare.router, prefix=settings.API_V1_STR)
-    print("Antigravity features (prediction & threat_compare) routers imported OK")
-except Exception as e:
-    print(f"Antigravity features routers failed: {e}")
-    traceback.print_exc()
 
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors

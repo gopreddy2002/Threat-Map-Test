@@ -486,32 +486,7 @@ async def shodan_lookup(ip: str):
         "status": "success"
     }
 
-# ─────────────────────────────────────────
-# 12. DARK WEB MENTIONS (MOCK)
-# ─────────────────────────────────────────
-@router.get("/darkweb/{indicator}")
-async def dark_web_lookup(indicator: str):
-    """Mock Dark Web intelligence to demonstrate leak exposure."""
-    await asyncio.sleep(0.6)
-    
-    import hashlib
-    score = int(hashlib.md5(indicator.encode()).hexdigest()[:2], 16)
-    
-    if score < 100:
-        return {
-            "indicator": indicator,
-            "mentions": 0,
-            "forums": [],
-            "status": "success"
-        }
-    
-    return {
-        "indicator": indicator,
-        "mentions": score % 15 + 1,
-        "forums": ["XSS.is", "BreachForums", "Exploit.in"][:(score % 3 + 1)],
-        "last_seen": (datetime.datetime.utcnow() - datetime.timedelta(days=score % 30)).isoformat(),
-        "status": "success"
-    }
+
 
 # ─────────────────────────────────────────
 # 13. ACTIVE WEB VULNERABILITY SCANNER (ENHANCED)

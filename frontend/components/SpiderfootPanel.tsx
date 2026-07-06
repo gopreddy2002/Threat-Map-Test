@@ -105,7 +105,7 @@ export default function SpiderfootPanel({ target }: { target: string }) {
             <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-4 block">travel_explore</span>
             <p className="text-sm text-on-surface-variant mb-2 max-w-lg mx-auto">
               Run a comprehensive deep scan utilizing SpiderFoot's 200+ OSINT modules.<br/>
-              Uncover <strong className="text-white">emails, subdomains, dark web mentions, social profiles</strong> and more.
+              Uncover <strong className="text-white">emails, subdomains, social profiles</strong> and more.
             </p>
             <p className="text-xs text-error/80 mb-5 font-mono">⚠ Deep scans take 5–15 minutes to complete.</p>
             <button onClick={startScan} className="bg-primary text-background font-bold px-8 py-2.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">
@@ -178,7 +178,7 @@ export default function SpiderfootPanel({ target }: { target: string }) {
               <ResultCard title="Emails Discovered"     data={results?.emails}      icon="mail" />
               <ResultCard title="Subdomains Found"      data={results?.subdomains}  icon="lan" />
               <ResultCard title="Related IPs"           data={results?.related_ips} icon="sensors" />
-              <ResultCard title="Dark Web Mentions"     data={results?.darkweb}     icon="public_off" />
+
               <ResultCard title="Social Media Profiles" data={results?.social}      icon="group" />
               <ResultCard title="Technology Stack"      data={results?.tech_stack}  icon="terminal" />
               <ResultCard title="Breach / Leaks"        data={results?.leaks}       icon="water_drop" />

@@ -22,7 +22,7 @@ export default function DeepScanPage() {
           DEEP <span className="text-primary font-light">OSINT</span>
         </h1>
         <p className="text-on-surface-variant max-w-lg mx-auto">
-          Execute a comprehensive 200+ module reconnaissance scan against any IP or Domain. Uncover dark web mentions, subdomains, emails, and full technology stacks.
+          Execute a comprehensive 200+ module reconnaissance scan against any IP or Domain. Uncover subdomains, emails, and full technology stacks.
         </p>
       </div>
 

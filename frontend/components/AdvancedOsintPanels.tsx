@@ -15,7 +15,6 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
     subdomains: null,
     dns: null,
     shodan: null,
-    darkweb: null,
     webvulns: null,
     techStack: null,
   });
@@ -53,7 +52,6 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
           promises.push(api.getSsl(domain).then(r => newData.ssl = r));
           promises.push(api.getSubdomains(domain).then(r => newData.subdomains = r));
           promises.push(api.getDnsRecords(domain).then(r => newData.dns = r));
-          promises.push(api.getDarkWeb(domain).then(r => newData.darkweb = r));
           promises.push(api.getWebVulns(domain).then(r => newData.webvulns = r));
           promises.push(api.getTechStack(domain).then(r => newData.techStack = r));
         }
@@ -123,40 +121,6 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
           </DetectionCard>
         )}
 
-        {/* Dark Web Mentions Panel */}
-        {data.darkweb && (
-          <DetectionCard
-            title="Dark Web Exposure"
-            subtitle="Mentions in hacker forums and leaked DBs"
-            status={data.darkweb?.mentions > 0 ? "Exposed" : "Clear"}
-            isMalicious={data.darkweb?.mentions > 0}
-            iconName="public_off"
-          >
-            <div className="mt-3">
-              <div className="flex justify-between text-[10px] font-mono-sm text-on-surface-variant mb-1">
-                <span>Threat Level</span>
-                <span className={data.darkweb?.mentions > 0 ? "text-error" : "text-success"}>
-                  {data.darkweb?.mentions} Mentions
-                </span>
-              </div>
-              <div className="w-full bg-surface-variant rounded-full h-1.5 overflow-hidden">
-                <div 
-                  className={`h-full ${data.darkweb?.mentions > 5 ? 'bg-error' : data.darkweb?.mentions > 0 ? 'bg-warning' : 'bg-success'}`}
-                  style={{ width: `${Math.min(100, ((data.darkweb?.mentions || 0) / 15) * 100)}%` }}
-                ></div>
-              </div>
-              {data.darkweb?.forums?.length > 0 && (
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {data.darkweb?.forums.map((f: string) => (
-                    <span key={f} className="text-[9px] bg-surface-variant text-on-surface px-1.5 py-0.5 rounded">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DetectionCard>
-        )}
 
         {/* DNS Records Panel */}
         {data.dns && (

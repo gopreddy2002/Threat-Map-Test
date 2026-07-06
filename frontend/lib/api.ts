@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats } from "../types";
 
-let base = process.env.NEXT_PUBLIC_API_URL || "/_/backend/api/v1";
+let base = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "/_/backend/api/v1";
 if (base && base.startsWith('http') && !base.endsWith('/api/v1')) {
     base = base.replace(/\/$/, '') + '/api/v1';
 }

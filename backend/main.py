@@ -172,6 +172,36 @@ def startup_event():
         logger.error(f"Database init failed: {e}")
     asyncio.create_task(keepalive_ping())
 
+    # Auto-start SpiderFoot Engine
+    import subprocess
+    import sys
+    import os
+    
+    # Path to the spiderfoot directory (one level up from backend)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    spiderfoot_dir = os.path.join(base_dir, "spiderfoot")
+    spiderfoot_script = os.path.join(spiderfoot_dir, "sf.py")
+    
+    if os.path.exists(spiderfoot_script):
+        logger.info("Starting SpiderFoot Engine in the background on port 5001...")
+        try:
+            # Use the backend's virtual environment python executable
+            python_exe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "Scripts", "python.exe")
+            if not os.path.exists(python_exe):
+                python_exe = sys.executable
+                
+            subprocess.Popen(
+                [python_exe, spiderfoot_script, "-l", "127.0.0.1:5001"],
+                cwd=spiderfoot_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
+        except Exception as e:
+            logger.error(f"Failed to auto-start SpiderFoot: {e}")
+    else:
+        logger.warning(f"SpiderFoot not found at {spiderfoot_script}. Skipping auto-start.")
+
 # WebSocket Connection Manager
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import List

@@ -1,10 +1,21 @@
 import axios from "axios";
 import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats } from "../types";
 
-let base = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
-if (base && base.startsWith('http') && !base.endsWith('/api/v1')) {
-    base = base.replace(/\/$/, '') + '/api/v1';
+export function normalizeApiBaseUrl(value?: string): string {
+  let base = value || "/api/v1";
+
+  if (base.startsWith("/")) {
+    return base.endsWith("/api/v1") ? base : `${base.replace(/\/$/, "")}/api/v1`;
+  }
+
+  base = base.replace(/\/$/, "");
+  return base.endsWith("/api/v1") ? base : `${base}/api/v1`;
 }
+
+const base = normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL
+);
+
 export const API_BASE_URL = base;
 
 const apiClient = axios.create({

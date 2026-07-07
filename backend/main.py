@@ -126,7 +126,7 @@ print("FastAPI app created OK")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Config — allow Railway + local dev
+# CORS config: allow Railway + local dev
 _raw_origins = os.getenv("CORS_ORIGINS", "")
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()] if _raw_origins else ["*"]
 
@@ -138,14 +138,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Exception Handler — catches ALL unhandled exceptions
+# Global exception handler: catches all unhandled exceptions
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     error_msg = traceback.format_exc()
     logger.error(f"UNHANDLED EXCEPTION on {request.method} {request.url}:\n{error_msg}")
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc), "detail": "Internal server error — check backend logs."}
+        content={"error": str(exc), "detail": "Internal server error - check backend logs."}
     )
 
 import asyncio
@@ -269,6 +269,7 @@ if tools:
     app.include_router(tools.router, prefix=settings.API_V1_STR)
 if alert_router:
     app.include_router(alert_router)
+    app.include_router(alert_router, prefix=settings.API_V1_STR)
 
 try:
     from routers import threat_actors

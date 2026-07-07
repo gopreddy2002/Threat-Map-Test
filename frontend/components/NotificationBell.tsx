@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 type Notification = {
   id: string;
@@ -16,9 +17,6 @@ type Notification = {
   created_at: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
-
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
@@ -26,7 +24,7 @@ export default function NotificationBell() {
   async function loadNotifications() {
     try {
       const response = await fetch(
-        `${API_BASE}/alerts/notifications?unread_only=true&limit=10`
+        `${API_BASE_URL}/alerts/notifications?unread_only=true&limit=10`
       );
 
       if (!response.ok) {
@@ -42,7 +40,7 @@ export default function NotificationBell() {
 
   async function markAsRead(id: string) {
     try {
-      await fetch(`${API_BASE}/alerts/notifications/${id}/read`, {
+      await fetch(`${API_BASE_URL}/alerts/notifications/${id}/read`, {
         method: "PATCH",
       });
 

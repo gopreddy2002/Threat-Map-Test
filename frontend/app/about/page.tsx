@@ -95,7 +95,7 @@ export default function AboutPage() {
     { name: "MITRE ATT&CK", desc: "Adversary tactic mapping and knowledge base.", limit: "Open Source Data", link: "https://attack.mitre.org" },
     { name: "crt.sh", desc: "SSL certificate transparency log search.", limit: "No hard limits (rate limited)", link: "https://crt.sh" },
     { name: "HackerTarget", desc: "Passive DNS history and network intelligence.", limit: "100 requests / day", link: "https://hackertarget.com" },
-    { name: "SpiderFoot", desc: "Open-source intelligence automation tool with 200+ modules.", limit: "Local instance", link: "https://github.com/smicallef/spiderfoot" },
+    { name: "Google Dorking", desc: "Locally generated advanced search queries for authorized OSINT research.", limit: "Manual search only", link: "https://www.google.com" },
   ];
 
   return (

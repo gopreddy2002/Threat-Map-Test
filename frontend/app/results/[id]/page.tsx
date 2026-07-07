@@ -10,7 +10,6 @@ import DetectionCard from "@/components/DetectionCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import AdvancedOsintPanels from "@/components/AdvancedOsintPanels";
 import WebVulnReport from "@/components/WebVulnReport";
-import SpiderfootPanel from "@/components/SpiderfootPanel";
 import CommunityNotes from "@/components/CommunityNotes";
 import DomainScanMetrics from "@/components/DomainScanMetrics";
 import WhoisJsonData from "@/components/WhoisJsonData";
@@ -824,9 +823,6 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       {scan.raw_data?.whoisjson && (
         <WhoisJsonData data={scan.raw_data.whoisjson} />
       )}
-
-      {/* SpiderFoot Deep OSINT Section */}
-      <SpiderfootPanel target={scan.indicator} />
 
       {/* ── Web Security Audit ───────────────────────────── */}
       {webVulnData && (scan.type === "domain" || scan.type === "url") && (

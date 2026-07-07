@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signIn, signOut } from "next-auth/react";
 import AnimatedBackground from "./AnimatedBackground";
 import NotificationBell from "./NotificationBell";
+import { API_BASE_URL } from "@/lib/api";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -104,9 +105,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: <span className="material-symbols-outlined text-[20px]">biotech</span>,
     },
     {
-      name: "Deep OSINT",
+      name: "Google Dorking",
       href: "/deep-scan",
-      icon: <span className="material-symbols-outlined text-[20px]">troubleshoot</span>,
+      icon: <span className="material-symbols-outlined text-[20px]">manage_search</span>,
     },
     {
       name: "Dashboard",
@@ -311,7 +312,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-4 relative">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-white/5 rounded text-[10px] font-mono-sm text-on-secondary-container">
               <span className="material-symbols-outlined text-[12px] text-primary">dns</span>
-              <span>API SERVER: /_/backend</span>
+              <span>API SERVER: {API_BASE_URL}</span>
             </div>
 
             {/* Notification Bell */}

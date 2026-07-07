@@ -12,7 +12,8 @@ const TOOLS = [
   { id: 'shodan', name: 'Shodan InternetDB', icon: 'radar', desc: 'Free open ports & vulns check for an IP' },
   { id: 'mac', name: 'MAC Vendor Lookup', icon: 'router', desc: 'Identify hardware vendor from MAC address' },
   { id: 'network', name: 'Network Range Scanner', icon: 'hub', desc: 'Analyze CIDR blocks and sample host reputation' },
-  { id: 'http', name: 'HTTP Security Headers', icon: 'http', desc: 'Check HSTS, CSP, X-Frame-Options' }
+  { id: 'http', name: 'HTTP Security Headers', icon: 'http', desc: 'Check HSTS, CSP, X-Frame-Options' },
+  { id: 'dorks', name: 'Google Dorking', icon: 'manage_search', desc: 'Generate advanced search queries for OSINT research' }
 ];
 
 export default function ToolsPage() {
@@ -24,6 +25,7 @@ export default function ToolsPage() {
   
   // Decoder specific
   const [decodeType, setDecodeType] = useState("auto");
+  const [dorkMode, setDorkMode] = useState("domain");
 
   const activeToolDef = TOOLS.find(t => t.id === activeTool);
 
@@ -66,6 +68,9 @@ export default function ToolsPage() {
           break;
         case 'http':
           res = await api.toolsHttpHeaders(input);
+          break;
+        case 'dorks':
+          res = await api.toolsGoogleDorks(input, dorkMode);
           break;
       }
       setResult(res);
@@ -194,6 +199,31 @@ export default function ToolsPage() {
         )
     }
 
+    if (activeTool === 'dorks') {
+      return (
+        <div className="space-y-4">
+          {result.note && (
+            <div className="bg-primary/10 border border-primary/20 text-primary text-xs rounded-lg p-3">
+              {result.note}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {result.dorks?.map((dork: any) => (
+              <div key={dork.name} className="bg-surface-container-low border border-white/5 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-bold text-white">{dork.name}</h4>
+                  <a href={dork.url} target="_blank" rel="noreferrer" className="text-xs bg-primary text-black font-bold px-3 py-1.5 rounded-lg">
+                    Open
+                  </a>
+                </div>
+                <code className="block text-xs text-primary bg-[#111827] border border-white/10 rounded-lg p-3 break-all">{dork.query}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     // Generic fallback for others (Email, DNS, Shodan, Mac, Network Range)
     return (
       <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[600px] custom-scrollbar">
@@ -214,6 +244,7 @@ export default function ToolsPage() {
           case 'mac': return "00:1A:2B:3C:4D:5E";
           case 'network': return "192.168.1.0/24";
           case 'http': return "https://example.com";
+          case 'dorks': return dorkMode === "domain" ? "example.com" : dorkMode === "email" ? "analyst@example.com" : "Acme Corp";
           default: return "Enter input...";
       }
   }
@@ -304,6 +335,17 @@ export default function ToolsPage() {
                       <input type="radio" name="dtype" value="hex" checked={decodeType==='hex'} onChange={e => setDecodeType(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
                       Hex
                     </label>
+                  </div>
+                )}
+
+                {activeTool === 'dorks' && (
+                  <div className="flex flex-wrap gap-4">
+                    {["domain", "company", "email", "keyword"].map((mode) => (
+                      <label key={mode} className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer capitalize">
+                        <input type="radio" name="dork-mode" value={mode} checked={dorkMode === mode} onChange={e => setDorkMode(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
+                        {mode}
+                      </label>
+                    ))}
                   </div>
                 )}
 

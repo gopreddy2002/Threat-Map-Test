@@ -80,13 +80,11 @@ except Exception as e:
 
 try:
     from routers import osint_extra
-    from routers import spiderfoot
     print("osint_extra router imported OK")
 except Exception as e:
     print(f"osint_extra router failed: {e}")
     traceback.print_exc()
     osint_extra = None
-    spiderfoot = None
 
 try:
     from routers import chat
@@ -176,38 +174,10 @@ def startup_event():
         logger.error(f"Database init failed: {e}")
 
     if os.environ.get("VERCEL"):
-        logger.info("Skipping local keepalive and SpiderFoot process startup on Vercel.")
+        logger.info("Skipping local keepalive on Vercel.")
         return
 
     asyncio.create_task(keepalive_ping())
-
-    # Auto-start SpiderFoot Engine
-    import subprocess
-    
-    # Path to the spiderfoot directory (one level up from backend)
-    base_dir = os.path.dirname(BACKEND_DIR)
-    spiderfoot_dir = os.path.join(base_dir, "spiderfoot")
-    spiderfoot_script = os.path.join(spiderfoot_dir, "sf.py")
-    
-    if os.path.exists(spiderfoot_script):
-        logger.info("Starting SpiderFoot Engine in the background on port 5001...")
-        try:
-            # Use the backend's virtual environment python executable
-            python_exe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "Scripts", "python.exe")
-            if not os.path.exists(python_exe):
-                python_exe = sys.executable
-                
-            subprocess.Popen(
-                [python_exe, spiderfoot_script, "-l", "127.0.0.1:5001"],
-                cwd=spiderfoot_dir,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            )
-        except Exception as e:
-            logger.error(f"Failed to auto-start SpiderFoot: {e}")
-    else:
-        logger.warning(f"SpiderFoot not found at {spiderfoot_script}. Skipping auto-start.")
 
 # WebSocket Connection Manager
 from fastapi import WebSocket, WebSocketDisconnect
@@ -268,8 +238,6 @@ if export:
     app.include_router(export.router, prefix=settings.API_V1_STR)
 if osint_extra:
     app.include_router(osint_extra.router, prefix=settings.API_V1_STR)
-if spiderfoot:
-    app.include_router(spiderfoot.router, prefix=settings.API_V1_STR)
 if chat:
     app.include_router(chat.router, prefix=settings.API_V1_STR)
 if tools:

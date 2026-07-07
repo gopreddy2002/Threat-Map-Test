@@ -92,7 +92,7 @@ export default function CyberBackground() {
       chars: { char: string; vx: number; vy: number }[];
     }
     
-    let dialogues: Dialogue[] = [];
+    const dialogues: Dialogue[] = [];
 
     const spawnDialogue = (isThreatActive: boolean) => {
       const textList = isThreatActive ? threatTexts : bgTexts;
@@ -154,7 +154,7 @@ export default function CyberBackground() {
       rotation: number;
       rotSpeed: number;
     }
-    let scopes: TargetScope[] = [];
+    const scopes: TargetScope[] = [];
 
     const spawnScope = (isThreatActive: boolean) => {
       // High chance of error if threat is active, small random chance otherwise
@@ -169,7 +169,7 @@ export default function CyberBackground() {
       const errors = ["ERR: ANOMALY", "SIG: MALWARE", "WARN: BREACH", "PORT 443 CLOSED", "SIG: DATA EXFIL"];
       const normals = ["TRG: ", "SCAN: ", "NODE: ", "PING: "];
       
-      let label = isError 
+      const label = isError 
         ? errors[Math.floor(Math.random() * errors.length)]
         : normals[Math.floor(Math.random() * normals.length)] + ips[Math.floor(Math.random() * ips.length)];
 

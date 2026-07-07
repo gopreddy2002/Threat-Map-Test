@@ -4,6 +4,10 @@ import logging
 import datetime
 import traceback
 
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 print("Python version:", sys.version)
 print("Starting main.py...")
 
@@ -170,15 +174,18 @@ def startup_event():
         logger.info("Database loaded successfully.")
     except Exception as e:
         logger.error(f"Database init failed: {e}")
+
+    if os.environ.get("VERCEL"):
+        logger.info("Skipping local keepalive and SpiderFoot process startup on Vercel.")
+        return
+
     asyncio.create_task(keepalive_ping())
 
     # Auto-start SpiderFoot Engine
     import subprocess
-    import sys
-    import os
     
     # Path to the spiderfoot directory (one level up from backend)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(BACKEND_DIR)
     spiderfoot_dir = os.path.join(base_dir, "spiderfoot")
     spiderfoot_script = os.path.join(spiderfoot_dir, "sf.py")
     

@@ -86,6 +86,8 @@ export default function Home() {
         }
       } else if (err.message === "Network Error") {
         errorMsg = "Cannot connect to the threat analysis server. Ensure the backend is running.";
+      } else if (err.message?.includes("Unexpected token '<'") || err.message?.includes("is not valid JSON")) {
+        errorMsg = `Backend returned an HTML error page instead of JSON. Check your .env.local file: NEXT_PUBLIC_API_BASE_URL should be set correctly. Restart your Next.js server if you just changed it.`;
       } else if (err.message) {
         errorMsg = err.message;
       }

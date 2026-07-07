@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # Optional Keys
     GROQ_API_KEY: Optional[str] = None
     OTX_API_KEY: Optional[str] = None
-    SHODAN_API_KEY: Optional[str] = None
+    SHODAN_API_KEY: Optional[str] = "L7MfQIpj0L7jEXQrwOe0WnJPgDbQKfdE"
     
     class Config:
         env_file = ".env"

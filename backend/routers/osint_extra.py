@@ -468,23 +468,66 @@ async def enumerate_dns_records(domain: str):
         return {"domain": domain, "records": {}, "status": "error", "detail": str(e)}
 
 # ─────────────────────────────────────────
-# 11. SHODAN INTEGRATION (MOCK)
+# 11. SHODAN INTEGRATION
 # ─────────────────────────────────────────
 @router.get("/shodan/{ip}")
 async def shodan_lookup(ip: str):
-    """Mock Shodan endpoint to demonstrate IoT/Server vulnerabilities."""
-    await asyncio.sleep(0.5) # Simulate API latency
-    return {
-        "ip": ip,
-        "os": "Linux 4.x",
-        "isp": "Amazon.com, Inc.",
-        "vulns": ["CVE-2021-44228", "CVE-2019-11043", "CVE-2023-23397"] if int(ip.split(".")[-1]) % 2 == 0 else [],
-        "banners": [
-            {"port": 22, "data": "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"},
-            {"port": 80, "data": "HTTP/1.1 200 OK\r\nServer: nginx/1.18.0"}
-        ],
-        "status": "success"
-    }
+    """Shodan endpoint to demonstrate IoT/Server vulnerabilities.
+    Falls back to mock data if SHODAN_API_KEY is not set."""
+    from core.config import settings
+    api_key = settings.SHODAN_API_KEY
+    
+    if not api_key:
+        await asyncio.sleep(0.5) # Simulate API latency
+        return {
+            "ip": ip,
+            "os": "Linux 4.x",
+            "isp": "Amazon.com, Inc.",
+            "vulns": ["CVE-2021-44228", "CVE-2019-11043", "CVE-2023-23397"] if int(ip.split(".")[-1]) % 2 == 0 else [],
+            "banners": [
+                {"port": 22, "data": "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"},
+                {"port": 80, "data": "HTTP/1.1 200 OK\r\nServer: nginx/1.18.0"}
+            ],
+            "status": "success",
+            "mocked": True
+        }
+
+    try:
+        url = f"https://api.shodan.io/shodan/host/{ip}?key={api_key}"
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                
+                vulns = data.get("vulns", [])
+                
+                # Extract banners (ports and their data)
+                banners = []
+                for item in data.get("data", []):
+                    port = item.get("port")
+                    port_data = item.get("data", "").strip()
+                    if port and port_data:
+                        # Truncate large banners for the frontend
+                        if len(port_data) > 100:
+                            port_data = port_data[:97] + "..."
+                        banners.append({"port": port, "data": port_data})
+                
+                return {
+                    "ip": ip,
+                    "os": data.get("os", "Unknown"),
+                    "isp": data.get("isp", "Unknown"),
+                    "vulns": vulns,
+                    "banners": banners[:10], # limit to first 10
+                    "status": "success",
+                    "mocked": False
+                }
+            elif response.status_code == 404:
+                return {"ip": ip, "status": "not_found", "detail": "No information available for that IP."}
+            else:
+                return {"ip": ip, "status": "error", "detail": f"Shodan API error: {response.status_code}"}
+    except Exception as e:
+        logger.error(f"Shodan API failed for {ip}: {e}")
+        return {"ip": ip, "status": "error", "detail": str(e)}
 
 
 

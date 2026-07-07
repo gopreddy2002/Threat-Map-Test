@@ -1,7 +1,14 @@
 import os
+import tempfile
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
+
+DEFAULT_DATABASE_URL = (
+    f"sqlite:///{os.path.join(tempfile.gettempdir(), 'threatmap.db')}"
+    if os.environ.get("VERCEL")
+    else "sqlite:///./threatmap.db"
+)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ThreatMap API"
@@ -10,13 +17,13 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = Field(
-        default="sqlite:////tmp/threatmap.db" if os.environ.get("VERCEL") else "sqlite:///./threatmap.db",
+        default=DEFAULT_DATABASE_URL,
         description="SQLAlchemy PostgreSQL connection string or local SQLite fallback."
     )
     
     # Redis Cache (Upstash)
-    REDIS_URL: str = Field(
-        default="your url",
+    REDIS_URL: Optional[str] = Field(
+        default=None,
         description="Redis connection URL"
     )
     UPSTASH_REDIS_REST_URL: str = "your_url"
@@ -42,7 +49,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
-        extra = "ignore"
         extra = "ignore"
 
 settings = Settings()

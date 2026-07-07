@@ -1,17 +1,31 @@
 import datetime
+import os
+import threading
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from core.config import settings
 
+def _ensure_sqlite_parent_dir(database_url: str) -> None:
+    if not database_url.startswith("sqlite:///") or database_url == "sqlite:///:memory:":
+        return
+
+    database_path = database_url.replace("sqlite:///", "", 1)
+    parent_dir = os.path.dirname(database_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
+
 # Handle schema prefixes if Supabase is used, fallback to sqlite locally
 if "sqlite" in settings.DATABASE_URL:
+    _ensure_sqlite_parent_dir(settings.DATABASE_URL)
     engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     engine = create_engine(settings.DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+_db_init_lock = threading.Lock()
+_db_initialized = False
 
 class Scan(Base):
     __tablename__ = "scans"
@@ -228,14 +242,29 @@ class RemediationPlaybook(Base):
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    global _db_initialized
+    with _db_init_lock:
+        if _db_initialized:
+            return
+        if "sqlite" in settings.DATABASE_URL:
+            _ensure_sqlite_parent_dir(settings.DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        _db_initialized = True
 
 def get_db():
+    init_db()
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+def reset_db_init_state_for_tests():
+    global _db_initialized
+    _db_initialized = False
+
+def create_all_tables():
+    Base.metadata.create_all(bind=engine)
 
 class AICopilotConversation(Base):
     __tablename__ = "ai_copilot_conversations"

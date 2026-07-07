@@ -75,9 +75,22 @@ export default function Home() {
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error(err);
-      const detail = err.response?.data?.detail || "An unexpected error occurred during scan.";
-      setScanError(detail);
+      console.error("Scan Error:", err);
+      let errorMsg = "An unexpected error occurred during scan.";
+      
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          errorMsg = err.response.data.detail.map((e: any) => e.msg).join(", ");
+        } else {
+          errorMsg = err.response.data.detail;
+        }
+      } else if (err.message === "Network Error") {
+        errorMsg = "Cannot connect to the threat analysis server. Ensure the backend is running.";
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      setScanError(errorMsg);
     } finally {
       setIsLoading(false);
     }

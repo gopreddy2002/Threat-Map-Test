@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { API_BASE_URL, api } from "@/lib/api";
 import { ScanResponse } from "@/types";
 import RiskGauge from "@/components/RiskGauge";
 import RiskBadge from "@/components/RiskBadge";
@@ -61,24 +61,58 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const [isSavingDrive, setIsSavingDrive] = useState(false);
 
   useEffect(() => {
+    const getCachedReport = (): ScanResponse | null => {
+      try {
+        const cacheKey = `threatmap:scan:${id}`;
+        const cached = sessionStorage.getItem(cacheKey) || localStorage.getItem(cacheKey);
+        return cached ? JSON.parse(cached) : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const hydrateReport = async (data: ScanResponse) => {
+      setScan(data);
+
+      // Fetch history for Trend Graph safely
+      if (typeof (api as any).searchHistory === 'function') {
+        (api as any).searchHistory({ query: data.indicator }).then((res: any) => setScanHistory(res.results?.reverse() || [])).catch(console.error);
+      }
+
+      // Check if item is already in watchlist. Do not fail the report if this request fails.
+      try {
+        const watchlist = await api.getWatchlist();
+        const found = watchlist.some((w: any) => w.indicator === data.indicator);
+        setIsAddedToWatch(found);
+      } catch (watchErr) {
+        console.error(watchErr);
+      }
+    };
+
     async function fetchReport() {
       try {
         setLoading(true);
         const data = await api.getScanReport(id);
-        setScan(data);
-        
-        // Fetch history for Trend Graph safely
-        if (typeof (api as any).searchHistory === 'function') {
-          (api as any).searchHistory({ query: data.indicator }).then((res: any) => setScanHistory(res.results?.reverse() || [])).catch(console.error);
-        }
-
-        // Check if item is already in watchlist
-        const watchlist = await api.getWatchlist();
-        const found = watchlist.some((w: any) => w.indicator === data.indicator);
-        setIsAddedToWatch(found);
+        const cacheKey = `threatmap:scan:${data.id}`;
+        const serializedData = JSON.stringify(data);
+        sessionStorage.setItem(cacheKey, serializedData);
+        localStorage.setItem(cacheKey, serializedData);
+        await hydrateReport(data);
       } catch (err: any) {
         console.error(err);
-        setError(err.response?.data?.detail || "Failed to load threat report. Please verify the URL or try scanning again.");
+        const cached = getCachedReport();
+        if (cached) {
+          await hydrateReport(cached);
+          setError("");
+          return;
+        }
+
+        const detail = err.response?.data?.detail;
+        if (err.response?.status === 404) {
+          setError("This report is no longer available on the server. Please run the scan again.");
+        } else {
+          setError(detail || "Failed to load threat report. Please verify the URL or try scanning again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -135,7 +169,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     
     setIsSavingDrive(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/export/drive`, {
+      const res = await fetch(`${API_BASE_URL}/export/drive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

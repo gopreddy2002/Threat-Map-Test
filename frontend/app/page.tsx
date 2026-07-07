@@ -68,6 +68,10 @@ export default function Home() {
         ]);
 
         if (result && result.id) {
+          const cacheKey = `threatmap:scan:${result.id}`;
+          const serializedResult = JSON.stringify(result);
+          sessionStorage.setItem(cacheKey, serializedResult);
+          localStorage.setItem(cacheKey, serializedResult);
           router.push(`/results/${result.id}`);
         } else {
           setScanError("Invalid response from server. Please try again.");

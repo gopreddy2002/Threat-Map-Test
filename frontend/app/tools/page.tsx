@@ -13,7 +13,9 @@ const TOOLS = [
   { id: 'mac', name: 'MAC Vendor Lookup', icon: 'router', desc: 'Identify hardware vendor from MAC address' },
   { id: 'network', name: 'Network Range Scanner', icon: 'hub', desc: 'Analyze CIDR blocks and sample host reputation' },
   { id: 'http', name: 'HTTP Security Headers', icon: 'http', desc: 'Check HSTS, CSP, X-Frame-Options' },
-  { id: 'dorks', name: 'Google Dorking', icon: 'manage_search', desc: 'Generate advanced search queries for OSINT research' }
+  { id: 'dorks', name: 'Google Dorking', icon: 'manage_search', desc: 'Generate advanced search queries for OSINT research' },
+  { id: 'spiderfoot', name: 'SpiderFoot Scan', icon: 'travel_explore', desc: 'Start a SpiderFoot OSINT scan from ThreatMap' },
+  { id: 'awesome-ti', name: 'Awesome TI Hub', icon: 'hub', desc: 'Query working feeds from awesome-threat-intelligence' }
 ];
 
 export default function ToolsPage() {
@@ -26,6 +28,11 @@ export default function ToolsPage() {
   // Decoder specific
   const [decodeType, setDecodeType] = useState("auto");
   const [dorkMode, setDorkMode] = useState("domain");
+  const [spiderFootType, setSpiderFootType] = useState("domain");
+  const [spiderFootUseCase, setSpiderFootUseCase] = useState("passive");
+  const [spiderFootScanId, setSpiderFootScanId] = useState("");
+  const [spiderFootEventType, setSpiderFootEventType] = useState("ALL");
+  const [awesomeTiType, setAwesomeTiType] = useState("auto");
 
   const activeToolDef = TOOLS.find(t => t.id === activeTool);
 
@@ -72,10 +79,109 @@ export default function ToolsPage() {
         case 'dorks':
           res = await api.toolsGoogleDorks(input, dorkMode);
           break;
+        case 'spiderfoot':
+          res = await api.toolsSpiderFoot(input, spiderFootType, spiderFootUseCase);
+          break;
+        case 'awesome-ti':
+          res = await api.awesomeTiLookup(input, awesomeTiType);
+          break;
       }
       setResult(res);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runSpiderFootAction = async (action: string) => {
+    setIsLoading(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      let res;
+      const scanId = spiderFootScanId.trim();
+
+      switch (action) {
+        case "health":
+          res = await api.spiderFootHealth();
+          break;
+        case "modules":
+          res = await api.spiderFootModules();
+          break;
+        case "types":
+          res = await api.spiderFootEventTypes();
+          break;
+        case "rules":
+          res = await api.spiderFootCorrelationRules();
+          break;
+        case "scans":
+          res = await api.spiderFootScans();
+          break;
+        case "info":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanInfo(scanId);
+          break;
+        case "logs":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanLogs(scanId, 100);
+          break;
+        case "summary":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanSummary(scanId);
+          break;
+        case "results":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanResults(scanId, spiderFootEventType || "ALL");
+          break;
+        case "unique":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanResults(scanId, spiderFootEventType || "ALL", true);
+          break;
+        case "correlations":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanCorrelations(scanId);
+          break;
+        case "export":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootScanExport(scanId, "json");
+          break;
+        case "search":
+          if (!input.trim()) throw new Error("Enter a search value in the main input first.");
+          res = await api.spiderFootSearch(input.trim(), scanId || undefined, spiderFootEventType || undefined);
+          break;
+        case "stop":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootStopScan(scanId);
+          break;
+        case "delete":
+          if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
+          res = await api.spiderFootDeleteScan(scanId);
+          break;
+        case "config":
+          res = await api.spiderFootConfig();
+          break;
+      }
+
+      setResult(res);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "SpiderFoot request failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runAwesomeTiAction = async (action: string) => {
+    setIsLoading(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      const res = action === "catalog" ? await api.awesomeTiCatalog() : await api.awesomeTiHealth();
+      setResult(res);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "Awesome TI request failed");
     } finally {
       setIsLoading(false);
     }
@@ -293,6 +399,156 @@ export default function ToolsPage() {
       );
     }
 
+    if (activeTool === 'spiderfoot') {
+      const started = result.status === "started";
+      const healthy = result.status === "success" || result.status === "online";
+      const failed = result.status === "unavailable" || result.status === "error";
+      const apiData = result.data ?? result.api_response;
+      const statusTitle = started
+        ? "SpiderFoot scan started"
+        : healthy
+          ? "SpiderFoot response received"
+          : failed
+            ? "SpiderFoot request needs attention"
+            : "SpiderFoot response";
+
+      return (
+        <div className="space-y-5">
+          <div className={`border p-4 rounded-xl ${started || healthy ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
+            <div className="flex items-start gap-3">
+              <span className={`material-symbols-outlined text-[22px] ${started || healthy ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                {started || healthy ? "task_alt" : "info"}
+              </span>
+              <div>
+                <h4 className={`font-bold text-sm ${started || healthy ? 'text-emerald-300' : 'text-yellow-300'}`}>
+                  {statusTitle}
+                </h4>
+                <p className="text-sm text-on-surface-variant mt-1">
+                  {result.note || result.detail || `Endpoint: ${result.endpoint || "SpiderFoot"}`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Target</div>
+              <div className="text-sm font-mono text-white break-all">{result.target || "Not applicable"}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Type</div>
+              <div className="text-sm font-bold text-primary capitalize">{result.target_type || result.endpoint || "SpiderFoot"}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Scan ID</div>
+              <div className="text-sm font-mono text-white break-all">{result.scan_id || "Not returned"}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {result.web_url && (
+              <a href={result.web_url} target="_blank" rel="noreferrer" className="bg-primary text-black font-bold px-4 py-2 rounded-lg text-sm">
+                Open SpiderFoot
+              </a>
+            )}
+            {result.scan_url && (
+              <a href={result.scan_url} target="_blank" rel="noreferrer" className="bg-white/10 text-white border border-white/10 font-bold px-4 py-2 rounded-lg text-sm">
+                View Scan
+              </a>
+            )}
+            {result.new_scan_url && (
+              <a href={result.new_scan_url} target="_blank" rel="noreferrer" className="bg-white/10 text-white border border-white/10 font-bold px-4 py-2 rounded-lg text-sm">
+                New Scan
+              </a>
+            )}
+          </div>
+
+          {result.setup?.length > 0 && (
+            <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
+              <h4 className="text-sm font-bold text-white mb-3">Setup</h4>
+              <ul className="space-y-2 text-sm text-on-surface-variant">
+                {result.setup.map((item: string) => (
+                  <li key={item} className="flex gap-2">
+                    <span className="text-primary">-</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              {result.last_error && (
+                <code className="block text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-4 break-all">
+                  {result.last_error}
+                </code>
+              )}
+            </div>
+          )}
+
+          {apiData && (
+            <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[520px] custom-scrollbar">
+              <pre className="text-xs text-emerald-400 font-mono">
+                {JSON.stringify(apiData, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTool === 'awesome-ti') {
+      const results = result.results || result.sources || result.checks || [];
+
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Status</div>
+              <div className="text-lg font-bold text-primary capitalize">{result.status}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Checked</div>
+              <div className="text-lg font-bold text-white">{result.checked_count ?? results.length}</div>
+            </div>
+            <div className="bg-error-container/10 p-4 rounded-xl border border-error/20">
+              <div className="text-xs text-error uppercase tracking-wider mb-1">Matches</div>
+              <div className="text-lg font-bold text-error">{result.matched_count ?? results.filter((r: any) => r.matched).length}</div>
+            </div>
+          </div>
+
+          {result.note && (
+            <div className="bg-primary/10 border border-primary/20 text-primary text-xs rounded-lg p-3">
+              {result.note}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {results.map((item: any) => (
+              <div key={item.id || item.name} className="bg-surface-container-low border border-white/5 rounded-xl p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{item.name}</h4>
+                    <p className="text-xs text-on-surface-variant mt-1">{item.description || item.detail || item.category}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {item.matched && <span className="text-xs bg-error/20 text-error px-2 py-1 rounded">match</span>}
+                    <span className="text-xs bg-white/5 text-on-surface-variant px-2 py-1 rounded">{item.status || (item.enabled ? "enabled" : "needs key")}</span>
+                    {item.api_key_required && <span className="text-xs bg-yellow-500/10 text-yellow-300 px-2 py-1 rounded">Auth-Key</span>}
+                  </div>
+                </div>
+                {item.url && (
+                  <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-primary break-all mt-3 block">
+                    {item.url}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[420px] custom-scrollbar">
+            <pre className="text-xs text-emerald-400 font-mono">{JSON.stringify(result, null, 2)}</pre>
+          </div>
+        </div>
+      );
+    }
+
     // Generic fallback for others (Email, DNS, Mac, Network Range)
     return (
       <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[600px] custom-scrollbar">
@@ -314,6 +570,8 @@ export default function ToolsPage() {
           case 'network': return "192.168.1.0/24";
           case 'http': return "https://example.com";
           case 'dorks': return dorkMode === "domain" ? "example.com" : dorkMode === "email" ? "analyst@example.com" : "Acme Corp";
+          case 'spiderfoot': return spiderFootType === "ip" ? "8.8.8.8" : spiderFootType === "email" ? "analyst@example.com" : "example.com";
+          case 'awesome-ti': return awesomeTiType === "hash" ? "44d88612fea8a8f36de82e1278abb02f" : awesomeTiType === "ip" ? "8.8.8.8" : "example.com";
           default: return "Enter input...";
       }
   }
@@ -415,6 +673,108 @@ export default function ToolsPage() {
                         {mode}
                       </label>
                     ))}
+                  </div>
+                )}
+
+                {activeTool === 'spiderfoot' && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-4">
+                      {["domain", "hostname", "ip", "netblock", "email", "username", "phone"].map((type) => (
+                        <label key={type} className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer capitalize">
+                          <input type="radio" name="spiderfoot-type" value={type} checked={spiderFootType === type} onChange={e => setSpiderFootType(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
+                          {type}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                      {["passive", "footprint", "investigate", "all"].map((mode) => (
+                        <label key={mode} className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer capitalize">
+                          <input type="radio" name="spiderfoot-usecase" value={mode} checked={spiderFootUseCase === mode} onChange={e => setSpiderFootUseCase(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
+                          {mode === "passive" ? "Passive OSINT" : mode}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={spiderFootScanId}
+                        onChange={(e) => setSpiderFootScanId(e.target.value)}
+                        placeholder="SpiderFoot scan ID for scan actions"
+                        className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary"
+                      />
+                      <input
+                        type="text"
+                        value={spiderFootEventType}
+                        onChange={(e) => setSpiderFootEventType(e.target.value)}
+                        placeholder="Event type, e.g. ALL or IP_ADDRESS"
+                        className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {[
+                        ["health", "Health"],
+                        ["scans", "Scans"],
+                        ["modules", "Modules"],
+                        ["types", "Types"],
+                        ["rules", "Rules"],
+                        ["info", "Info"],
+                        ["logs", "Logs"],
+                        ["summary", "Summary"],
+                        ["results", "Results"],
+                        ["unique", "Unique"],
+                        ["correlations", "Correlations"],
+                        ["export", "Export"],
+                        ["search", "Search"],
+                        ["config", "Config"],
+                        ["stop", "Stop"],
+                        ["delete", "Delete"],
+                      ].map(([action, label]) => (
+                        <button
+                          key={action}
+                          type="button"
+                          onClick={() => runSpiderFootAction(action)}
+                          disabled={isLoading}
+                          className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
+                            action === "delete" || action === "stop"
+                              ? "bg-error/10 border-error/20 text-error hover:bg-error/20"
+                              : "bg-white/5 border-white/10 text-on-surface-variant hover:text-white hover:bg-white/10"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTool === 'awesome-ti' && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-4">
+                      {["auto", "ip", "domain", "url", "hash"].map((type) => (
+                        <label key={type} className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer capitalize">
+                          <input type="radio" name="awesome-ti-type" value={type} checked={awesomeTiType === type} onChange={e => setAwesomeTiType(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
+                          {type}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => runAwesomeTiAction("catalog")}
+                        disabled={isLoading}
+                        className="text-xs font-bold px-3 py-2 rounded-lg border bg-white/5 border-white/10 text-on-surface-variant hover:text-white hover:bg-white/10 disabled:opacity-50"
+                      >
+                        Catalog
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => runAwesomeTiAction("health")}
+                        disabled={isLoading}
+                        className="text-xs font-bold px-3 py-2 rounded-lg border bg-white/5 border-white/10 text-on-surface-variant hover:text-white hover:bg-white/10 disabled:opacity-50"
+                      >
+                        Health
+                      </button>
+                    </div>
                   </div>
                 )}
 

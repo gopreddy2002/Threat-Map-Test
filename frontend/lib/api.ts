@@ -310,6 +310,93 @@ export const api = {
     const response = await apiClient.post(`/tools/google-dorks`, { target, mode });
     return response.data;
   },
+  awesomeTiCatalog: async () => {
+    const response = await apiClient.get(`/tools/awesome-ti/catalog`);
+    return response.data;
+  },
+  awesomeTiHealth: async () => {
+    const response = await apiClient.get(`/tools/awesome-ti/health`);
+    return response.data;
+  },
+  awesomeTiLookup: async (indicator: string, indicatorType: string = "auto") => {
+    const response = await apiClient.post(`/tools/awesome-ti/lookup`, {
+      indicator,
+      indicator_type: indicatorType,
+    });
+    return response.data;
+  },
+  toolsSpiderFoot: async (target: string, targetType: string = "domain", useCase: string = "passive") => {
+    const response = await apiClient.post(`/tools/spiderfoot`, {
+      target,
+      target_type: targetType,
+      use_case: useCase,
+    });
+    return response.data;
+  },
+  spiderFootHealth: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/health`);
+    return response.data;
+  },
+  spiderFootModules: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/modules`);
+    return response.data;
+  },
+  spiderFootEventTypes: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/event-types`);
+    return response.data;
+  },
+  spiderFootCorrelationRules: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/correlation-rules`);
+    return response.data;
+  },
+  spiderFootScans: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans`);
+    return response.data;
+  },
+  spiderFootScanInfo: async (scanId: string) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}`);
+    return response.data;
+  },
+  spiderFootScanLogs: async (scanId: string, limit: number = 100) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/logs`, { params: { limit } });
+    return response.data;
+  },
+  spiderFootScanSummary: async (scanId: string) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/summary`);
+    return response.data;
+  },
+  spiderFootScanResults: async (scanId: string, eventType: string = "ALL", unique: boolean = false) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/results`, { params: { event_type: eventType, unique } });
+    return response.data;
+  },
+  spiderFootScanCorrelations: async (scanId: string) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/correlations`);
+    return response.data;
+  },
+  spiderFootScanExport: async (scanId: string, exportFormat: string = "json") => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/export`, { params: { export_format: exportFormat } });
+    return response.data;
+  },
+  spiderFootStopScan: async (scanId: string) => {
+    const response = await apiClient.post(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/stop`);
+    return response.data;
+  },
+  spiderFootDeleteScan: async (scanId: string) => {
+    const response = await apiClient.delete(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}`);
+    return response.data;
+  },
+  spiderFootSearch: async (value: string, scanId?: string, eventType?: string) => {
+    const response = await apiClient.post(`/tools/spiderfoot/search`, {
+      value,
+      scan_id: scanId || null,
+      event_type: eventType || null,
+    });
+    return response.data;
+  },
+  spiderFootConfig: async () => {
+    const response = await apiClient.get(`/tools/spiderfoot/config`);
+    return response.data;
+  },
 
   // Bulk Upload Methods
   uploadBulkFile: async (

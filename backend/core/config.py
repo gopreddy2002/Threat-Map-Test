@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = None
     OTX_API_KEY: Optional[str] = None
     SHODAN_API_KEY: Optional[str] = "L7MfQIpj0L7jEXQrwOe0WnJPgDbQKfdE"
+    SPIDERFOOT_BASE_URL: Optional[str] = "http://127.0.0.1:5001"
+    SPIDERFOOT_API_KEY: Optional[str] = None
+    SPIDERFOOT_USERNAME: Optional[str] = None
+    SPIDERFOOT_PASSWORD: Optional[str] = None
+    ABUSECH_AUTH_KEY: Optional[str] = None
     
     class Config:
         env_file = ".env"

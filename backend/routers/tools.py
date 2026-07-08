@@ -3,12 +3,14 @@ import base64
 import binascii
 import email.parser
 import ipaddress
+import json
 import urllib.parse
 import re
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 import httpx
-from core.config import settings
+from core.config import is_configured_secret, settings
 
 try:
     import dns.asyncresolver
@@ -27,6 +29,273 @@ class DecodeRequest(BaseModel):
 class GoogleDorkRequest(BaseModel):
     target: str
     mode: str = "domain"
+
+class SpiderFootRequest(BaseModel):
+    target: str
+    target_type: str = "domain"
+    scan_name: Optional[str] = None
+    module_list: Optional[str] = None
+    type_list: Optional[str] = None
+    use_case: str = "passive"
+
+class SpiderFootSearchRequest(BaseModel):
+    value: str
+    scan_id: Optional[str] = None
+    event_type: Optional[str] = None
+
+class SpiderFootConfigUpdateRequest(BaseModel):
+    token: str
+    allopts: dict
+
+class AwesomeTILookupRequest(BaseModel):
+    indicator: str
+    indicator_type: str = "auto"
+
+AWESOME_TI_SOURCES = [
+    {
+        "id": "ipsum",
+        "name": "IPsum",
+        "category": "ip_reputation",
+        "source": "awesome-threat-intelligence",
+        "url": "https://raw.githubusercontent.com/stamparm/ipsum/master/ipsum.txt",
+        "api_key_required": False,
+        "supported_types": ["ip"],
+        "description": "Aggregated suspicious IP feed from public blocklists.",
+    },
+    {
+        "id": "feodo_tracker",
+        "name": "Feodo Tracker",
+        "category": "botnet_c2",
+        "source": "awesome-threat-intelligence",
+        "url": "https://feodotracker.abuse.ch/downloads/ipblocklist.txt",
+        "api_key_required": False,
+        "supported_types": ["ip"],
+        "description": "abuse.ch botnet C2 IP blocklist.",
+    },
+    {
+        "id": "sslbl",
+        "name": "SSLBL",
+        "category": "botnet_c2",
+        "source": "awesome-threat-intelligence",
+        "url": "https://sslbl.abuse.ch/blacklist/sslipblacklist.csv",
+        "api_key_required": False,
+        "supported_types": ["ip"],
+        "description": "abuse.ch SSLBL botnet C2 IP blacklist.",
+    },
+    {
+        "id": "urlhaus_recent",
+        "name": "URLhaus Recent URLs",
+        "category": "malware_urls",
+        "source": "awesome-threat-intelligence",
+        "url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+        "api_key_required": False,
+        "supported_types": ["url", "domain", "ip"],
+        "description": "Recent malware URLs published by URLhaus.",
+    },
+    {
+        "id": "urlhaus_api",
+        "name": "URLhaus API",
+        "category": "malware_urls",
+        "source": "awesome-threat-intelligence",
+        "url": "https://urlhaus-api.abuse.ch/",
+        "api_key_required": True,
+        "supported_types": ["url", "domain", "ip", "hash"],
+        "description": "URL, host, and payload lookups from URLhaus.",
+    },
+    {
+        "id": "threatfox_api",
+        "name": "ThreatFox API",
+        "category": "ioc_search",
+        "source": "awesome-threat-intelligence",
+        "url": "https://threatfox.abuse.ch/api/",
+        "api_key_required": True,
+        "supported_types": ["ip", "domain", "url", "hash"],
+        "description": "IOC and hash search for malware infrastructure.",
+    },
+    {
+        "id": "malwarebazaar_api",
+        "name": "MalwareBazaar API",
+        "category": "malware_hashes",
+        "source": "awesome-threat-intelligence",
+        "url": "https://bazaar.abuse.ch/api/",
+        "api_key_required": True,
+        "supported_types": ["hash"],
+        "description": "Malware sample metadata by hash.",
+    },
+]
+
+def _spiderfoot_base_url() -> str:
+    return (settings.SPIDERFOOT_BASE_URL or "http://127.0.0.1:5001").rstrip("/")
+
+def _spiderfoot_headers() -> dict:
+    headers = {
+        "User-Agent": "ThreatMap-SpiderFoot/1.0",
+        "Accept": "application/json",
+    }
+    if settings.SPIDERFOOT_API_KEY:
+        headers["X-API-Key"] = settings.SPIDERFOOT_API_KEY
+        headers["Authorization"] = f"Bearer {settings.SPIDERFOOT_API_KEY}"
+    return headers
+
+def _spiderfoot_auth():
+    if settings.SPIDERFOOT_USERNAME and settings.SPIDERFOOT_PASSWORD:
+        return httpx.DigestAuth(settings.SPIDERFOOT_USERNAME, settings.SPIDERFOOT_PASSWORD)
+    return None
+
+def _spiderfoot_parse_response(resp: httpx.Response):
+    try:
+        return resp.json()
+    except Exception:
+        return {"raw": resp.text[:5000]}
+
+def _spiderfoot_unavailable(last_error: Optional[str] = None) -> dict:
+    base_url = _spiderfoot_base_url()
+    return {
+        "source": "spiderfoot",
+        "status": "unavailable",
+        "web_url": base_url,
+        "detail": "ThreatMap could not reach the SpiderFoot API. Start SpiderFoot and set SPIDERFOOT_BASE_URL if it runs somewhere else.",
+        "last_error": last_error,
+        "setup": [
+            "Clone https://github.com/smicallef/spiderfoot.git or use your existing SpiderFoot install.",
+            "Start the SpiderFoot web server, commonly on http://127.0.0.1:5001.",
+            "Set SPIDERFOOT_BASE_URL to the SpiderFoot server URL.",
+            "Set SPIDERFOOT_USERNAME and SPIDERFOOT_PASSWORD if the SpiderFoot server uses digest auth.",
+            "Set SPIDERFOOT_API_KEY if your deployment requires a custom API key header.",
+        ],
+    }
+
+async def _spiderfoot_request(path: str, method: str = "GET", params: Optional[dict] = None, data: Optional[dict] = None) -> dict:
+    url = f"{_spiderfoot_base_url()}{path}"
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, auth=_spiderfoot_auth()) as client:
+            if method.upper() == "POST":
+                resp = await client.post(url, data=data or {}, headers=_spiderfoot_headers())
+            else:
+                resp = await client.get(url, params=params or {}, headers=_spiderfoot_headers())
+
+        if resp.status_code >= 400:
+            return {
+                "source": "spiderfoot",
+                "status": "error",
+                "endpoint": path,
+                "status_code": resp.status_code,
+                "detail": resp.text[:500],
+            }
+
+        return {
+            "source": "spiderfoot",
+            "status": "success",
+            "endpoint": path,
+            "data": _spiderfoot_parse_response(resp),
+        }
+    except Exception as e:
+        return _spiderfoot_unavailable(str(e))
+
+def _scan_id_from_response(data):
+    if isinstance(data, list) and data:
+        return data[1] if data[0] == "SUCCESS" and len(data) > 1 else None
+    if isinstance(data, dict):
+        return data.get("id") or data.get("scan_id") or data.get("scanId") or data.get("scan")
+    if isinstance(data, str):
+        return data
+    return None
+
+def _detect_indicator_type(indicator: str) -> str:
+    value = indicator.strip()
+    if re.fullmatch(r"[A-Fa-f0-9]{32}|[A-Fa-f0-9]{40}|[A-Fa-f0-9]{64}", value):
+        return "hash"
+    try:
+        ipaddress.ip_address(value)
+        return "ip"
+    except ValueError:
+        pass
+    if value.startswith(("http://", "https://")):
+        return "url"
+    if "@" in value and "." in value:
+        return "email"
+    if "." in value:
+        return "domain"
+    return "keyword"
+
+def _strip_public_feed_lines(text: str) -> list[str]:
+    values = []
+    for line in text.splitlines():
+        clean = line.strip()
+        if not clean or clean.startswith("#"):
+            continue
+        values.append(clean.split(",")[0].split()[0].strip('"'))
+    return values
+
+async def _fetch_text_feed(source: dict, indicator: str) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(source["url"])
+        if resp.status_code >= 400:
+            return {**source, "status": "error", "detail": f"HTTP {resp.status_code}"}
+        values = _strip_public_feed_lines(resp.text)
+        matched = indicator in values
+        return {
+            **source,
+            "status": "success",
+            "matched": matched,
+            "sample_size": len(values),
+            "matches": [indicator] if matched else [],
+        }
+    except Exception as e:
+        return {**source, "status": "unavailable", "detail": str(e)}
+
+async def _abusech_post(source: dict, url: str, payload: dict, auth_key: Optional[str]) -> dict:
+    if not auth_key:
+        return {
+            **source,
+            "status": "not_configured",
+            "detail": "Set ABUSECH_AUTH_KEY to enable this documented abuse.ch API.",
+        }
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            resp = await client.post(url, data=payload, headers={"Auth-Key": auth_key, "Accept": "application/json"})
+        if resp.status_code >= 400:
+            return {**source, "status": "error", "detail": f"HTTP {resp.status_code}: {resp.text[:300]}"}
+        data = resp.json()
+        query_status = data.get("query_status") if isinstance(data, dict) else None
+        return {
+            **source,
+            "status": "success",
+            "matched": query_status == "ok",
+            "query_status": query_status,
+            "data": data,
+        }
+    except Exception as e:
+        return {**source, "status": "unavailable", "detail": str(e)}
+
+async def _threatfox_post(source: dict, payload: dict, auth_key: Optional[str]) -> dict:
+    if not auth_key:
+        return {
+            **source,
+            "status": "not_configured",
+            "detail": "Set ABUSECH_AUTH_KEY to enable this documented ThreatFox API.",
+        }
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            resp = await client.post(
+                "https://threatfox-api.abuse.ch/api/v1/",
+                json=payload,
+                headers={"Auth-Key": auth_key, "Accept": "application/json"},
+            )
+        if resp.status_code >= 400:
+            return {**source, "status": "error", "detail": f"HTTP {resp.status_code}: {resp.text[:300]}"}
+        data = resp.json()
+        query_status = data.get("query_status") if isinstance(data, dict) else None
+        return {
+            **source,
+            "status": "success",
+            "matched": query_status == "ok",
+            "query_status": query_status,
+            "data": data,
+        }
+    except Exception as e:
+        return {**source, "status": "unavailable", "detail": str(e)}
 
 @router.post("/email-headers")
 async def analyze_email_headers(request: EmailHeadersRequest):
@@ -293,6 +562,266 @@ async def generate_google_dorks(req: GoogleDorkRequest):
         ],
         "note": "Queries are generated locally. Open links manually and only investigate assets you are authorized to assess.",
     }
+
+@router.get("/awesome-ti/catalog")
+async def awesome_ti_catalog():
+    auth_configured = is_configured_secret(settings.ABUSECH_AUTH_KEY, min_length=12)
+    return {
+        "source": "hslatman/awesome-threat-intelligence",
+        "status": "success",
+        "catalog_url": "https://github.com/hslatman/awesome-threat-intelligence",
+        "auth": {"abusech_auth_key_configured": auth_configured},
+        "sources": [
+            {
+                **source,
+                "enabled": (not source["api_key_required"]) or auth_configured,
+            }
+            for source in AWESOME_TI_SOURCES
+        ],
+    }
+
+@router.get("/awesome-ti/health")
+async def awesome_ti_health():
+    public_sources = [s for s in AWESOME_TI_SOURCES if not s["api_key_required"]]
+    checks = await asyncio.gather(*[_fetch_text_feed(source, "__healthcheck__") for source in public_sources])
+    return {
+        "source": "hslatman/awesome-threat-intelligence",
+        "status": "success",
+        "checks": [
+            {
+                "id": check["id"],
+                "name": check["name"],
+                "status": check["status"],
+                "sample_size": check.get("sample_size"),
+                "detail": check.get("detail"),
+            }
+            for check in checks
+        ],
+    }
+
+@router.post("/awesome-ti/lookup")
+async def awesome_ti_lookup(req: AwesomeTILookupRequest):
+    indicator = req.indicator.strip()
+    if not indicator:
+        raise HTTPException(status_code=400, detail="Indicator cannot be empty")
+
+    indicator_type = req.indicator_type.strip().lower()
+    if indicator_type == "auto":
+        indicator_type = _detect_indicator_type(indicator)
+
+    auth_key = settings.ABUSECH_AUTH_KEY if is_configured_secret(settings.ABUSECH_AUTH_KEY, min_length=12) else None
+    source_map = {source["id"]: source for source in AWESOME_TI_SOURCES}
+    tasks = []
+
+    if indicator_type == "ip":
+        for source_id in ["ipsum", "feodo_tracker", "sslbl"]:
+            tasks.append(_fetch_text_feed(source_map[source_id], indicator))
+
+    if indicator_type in {"url", "domain", "ip"}:
+        tasks.append(_fetch_text_feed(source_map["urlhaus_recent"], indicator))
+        urlhaus_payload = {"host": indicator} if indicator_type in {"domain", "ip"} else {"url": indicator}
+        urlhaus_endpoint = "https://urlhaus-api.abuse.ch/v1/host/" if indicator_type in {"domain", "ip"} else "https://urlhaus-api.abuse.ch/v1/url/"
+        tasks.append(_abusech_post(source_map["urlhaus_api"], urlhaus_endpoint, urlhaus_payload, auth_key))
+        tasks.append(_threatfox_post(source_map["threatfox_api"], {"query": "search_ioc", "search_term": indicator, "exact_match": True}, auth_key))
+
+    if indicator_type == "hash":
+        tasks.append(_abusech_post(source_map["urlhaus_api"], "https://urlhaus-api.abuse.ch/v1/payload/", {"sha256_hash": indicator}, auth_key))
+        tasks.append(_abusech_post(source_map["malwarebazaar_api"], "https://mb-api.abuse.ch/api/v1/", {"query": "get_info", "hash": indicator}, auth_key))
+        tasks.append(_threatfox_post(source_map["threatfox_api"], {"query": "search_hash", "hash": indicator}, auth_key))
+
+    if not tasks:
+        return {
+            "source": "hslatman/awesome-threat-intelligence",
+            "status": "unsupported",
+            "indicator": indicator,
+            "indicator_type": indicator_type,
+            "detail": "No working source in the curated integration supports this indicator type yet.",
+            "results": [],
+        }
+
+    results = await asyncio.gather(*tasks)
+    matched = [result for result in results if result.get("matched")]
+    return {
+        "source": "hslatman/awesome-threat-intelligence",
+        "status": "success",
+        "indicator": indicator,
+        "indicator_type": indicator_type,
+        "matched_count": len(matched),
+        "checked_count": len(results),
+        "results": results,
+        "note": "Only stable public feeds and documented APIs from the awesome-threat-intelligence catalog are queried. Key-required APIs are skipped until ABUSECH_AUTH_KEY is configured.",
+    }
+
+@router.post("/spiderfoot")
+async def start_spiderfoot_scan(req: SpiderFootRequest):
+    target = req.target.strip()
+    target_type = req.target_type.strip().lower()
+    use_case = req.use_case.strip().lower() or "passive"
+
+    if not target:
+        raise HTTPException(status_code=400, detail="Target cannot be empty")
+
+    allowed_types = {"domain", "ip", "email", "username", "phone", "netblock", "hostname"}
+    if target_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Target type must be one of: {', '.join(sorted(allowed_types))}")
+
+    allowed_use_cases = {"passive", "all", "investigate", "footprint"}
+    if use_case not in allowed_use_cases:
+        raise HTTPException(status_code=400, detail=f"Use case must be one of: {', '.join(sorted(allowed_use_cases))}")
+
+    if target_type == "ip":
+        try:
+            ipaddress.ip_address(target)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid IP address")
+
+    if target_type == "netblock":
+        try:
+            ipaddress.ip_network(target, strict=False)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid network range")
+
+    base_url = _spiderfoot_base_url()
+    scan_name = (req.scan_name or f"ThreatMap {target}").strip()
+    module_list = (req.module_list or "").strip()
+    type_list = (req.type_list or "").strip()
+
+    payload = {
+        "scanname": scan_name,
+        "scantarget": target,
+        "typelist": type_list,
+        "modulelist": module_list,
+        "usecase": use_case,
+    }
+
+    response = await _spiderfoot_request("/startscan", method="POST", data=payload)
+    if response.get("status") != "success":
+        return {**response, "target": target, "target_type": target_type}
+
+    data = response.get("data")
+    accepted = not (isinstance(data, list) and data and data[0] == "ERROR")
+    scan_id = _scan_id_from_response(data)
+    if accepted:
+        return {
+            "source": "spiderfoot",
+            "status": "started",
+            "target": target,
+            "target_type": target_type,
+            "scan_name": scan_name,
+            "scan_id": scan_id,
+            "web_url": base_url,
+            "scan_url": f"{base_url}/scanopts?id={scan_id}" if scan_id else f"{base_url}/scanlist",
+            "api_response": data,
+            "note": "SpiderFoot accepted the scan request. Review results in the SpiderFoot web UI.",
+        }
+
+    last_error = data[1] if isinstance(data, list) and len(data) > 1 else str(data)
+    return {
+        "source": "spiderfoot",
+        "status": "error",
+        "target": target,
+        "target_type": target_type,
+        "web_url": base_url,
+        "detail": "SpiderFoot did not accept the scan request.",
+        "last_error": last_error,
+    }
+
+@router.get("/spiderfoot/health")
+async def spiderfoot_health():
+    response = await _spiderfoot_request("/ping")
+    data = response.get("data")
+    if response.get("status") == "success" and isinstance(data, list) and data:
+        return {
+            "source": "spiderfoot",
+            "status": "online" if data[0] == "SUCCESS" else "error",
+            "version": data[1] if len(data) > 1 else None,
+            "web_url": _spiderfoot_base_url(),
+            "api_response": data,
+        }
+    return response
+
+@router.get("/spiderfoot/modules")
+async def spiderfoot_modules():
+    return await _spiderfoot_request("/modules")
+
+@router.get("/spiderfoot/event-types")
+async def spiderfoot_event_types():
+    return await _spiderfoot_request("/eventtypes")
+
+@router.get("/spiderfoot/correlation-rules")
+async def spiderfoot_correlation_rules():
+    return await _spiderfoot_request("/correlationrules")
+
+@router.get("/spiderfoot/scans")
+async def spiderfoot_scans():
+    return await _spiderfoot_request("/scanlist")
+
+@router.get("/spiderfoot/scans/{scan_id}")
+async def spiderfoot_scan_info(scan_id: str):
+    return await _spiderfoot_request("/scanopts", params={"id": scan_id})
+
+@router.get("/spiderfoot/scans/{scan_id}/logs")
+async def spiderfoot_scan_logs(scan_id: str, limit: int = Query(100, ge=1, le=1000)):
+    return await _spiderfoot_request("/scanlog", method="POST", data={"id": scan_id, "limit": str(limit)})
+
+@router.get("/spiderfoot/scans/{scan_id}/summary")
+async def spiderfoot_scan_summary(scan_id: str, by: str = Query("type")):
+    return await _spiderfoot_request("/scansummary", params={"id": scan_id, "by": by})
+
+@router.get("/spiderfoot/scans/{scan_id}/results")
+async def spiderfoot_scan_results(
+    scan_id: str,
+    event_type: str = Query("ALL"),
+    unique: bool = Query(False),
+):
+    path = "/scaneventresultsunique" if unique else "/scaneventresults"
+    return await _spiderfoot_request(path, method="POST", data={"id": scan_id, "eventType": event_type})
+
+@router.get("/spiderfoot/scans/{scan_id}/correlations")
+async def spiderfoot_scan_correlations(scan_id: str, correlation_id: Optional[str] = Query(None)):
+    if correlation_id:
+        return await _spiderfoot_request("/scaneventresults", method="POST", data={"id": scan_id, "correlationId": correlation_id})
+    return await _spiderfoot_request("/scancorrelations", method="POST", data={"id": scan_id})
+
+@router.get("/spiderfoot/scans/{scan_id}/export")
+async def spiderfoot_scan_export(scan_id: str, export_format: str = Query("json", pattern="^(json|csv|gexf)$")):
+    endpoints = {
+        "json": "/scanexportjsonmulti",
+        "csv": "/scaneventresultexportmulti",
+        "gexf": "/scanvizmulti",
+    }
+    return await _spiderfoot_request(endpoints[export_format], method="POST", data={"ids": scan_id})
+
+@router.post("/spiderfoot/scans/{scan_id}/stop")
+async def spiderfoot_stop_scan(scan_id: str):
+    return await _spiderfoot_request("/stopscan", params={"id": scan_id})
+
+@router.delete("/spiderfoot/scans/{scan_id}")
+async def spiderfoot_delete_scan(scan_id: str):
+    return await _spiderfoot_request("/scandelete", params={"id": scan_id})
+
+@router.post("/spiderfoot/search")
+async def spiderfoot_search(req: SpiderFootSearchRequest):
+    value = req.value.strip()
+    if not value:
+        raise HTTPException(status_code=400, detail="Search value cannot be empty")
+    return await _spiderfoot_request(
+        "/search",
+        method="POST",
+        data={"value": value, "id": req.scan_id, "eventType": req.event_type},
+    )
+
+@router.get("/spiderfoot/config")
+async def spiderfoot_get_config():
+    return await _spiderfoot_request("/optsraw")
+
+@router.post("/spiderfoot/config")
+async def spiderfoot_save_config(req: SpiderFootConfigUpdateRequest):
+    return await _spiderfoot_request(
+        "/savesettingsraw",
+        method="POST",
+        data={"token": req.token, "allopts": json.dumps(req.allopts)},
+    )
 
 @router.get("/dns")
 async def enumerate_dns(domain: str = Query(..., description="Domain to enumerate")):

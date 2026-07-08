@@ -28,6 +28,27 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
       
       const newData = { ...data };
 
+      // If a prefetch was stored at scan start, use it to populate panels immediately
+      try {
+        const key = `preload:${indicator}:${type}`;
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          Object.assign(newData, parsed);
+          // Remove preloaded cache after use to avoid stale reuse
+          try { sessionStorage.removeItem(key); } catch (e) {}
+          // If we got a full set, skip fetching
+          const keys = Object.keys(parsed || {});
+          if (keys.length > 0) {
+            setData(newData);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore sessionStorage errors
+      }
+
       try {
         // Run lookups in parallel based on indicator type
         const promises = [];

@@ -1,0 +1,9 @@
+Failed to connect to Redis: Redis URL must specify one of the following schemes (redis://, rediss://, unix://). Running without cache persistence.
+Gemini API key not set. Using rule-based threat intelligence fallback.
+INFO:     Started server process [2992]
+INFO:     Waiting for application startup.
+2026-07-07 23:35:39,268 - main - INFO - Initializing database schemas...
+2026-07-07 23:35:39,268 - main - INFO - Database loaded successfully.
+2026-07-07 23:35:39,268 - main - INFO - Starting SpiderFoot Engine in the background on port 5001...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)

@@ -51,6 +51,16 @@ class AwesomeTILookupRequest(BaseModel):
     indicator: str
     indicator_type: str = "auto"
 
+class SocTriageRequest(BaseModel):
+    alert_text: str
+    artifact_type: str = "auto"
+    severity_hint: Optional[str] = None
+
+class DetectionPackRequest(BaseModel):
+    indicator: str
+    indicator_type: str = "auto"
+    title: Optional[str] = None
+
 AWESOME_TI_SOURCES = [
     {
         "id": "ipsum",
@@ -217,6 +227,177 @@ def _detect_indicator_type(indicator: str) -> str:
     if "." in value:
         return "domain"
     return "keyword"
+
+def _extract_soc_observables(text: str) -> dict:
+    ip_regex = r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b"
+    domain_regex = r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b"
+    url_regex = r"https?://[^\s\"'<>]+"
+    hash_regex = r"\b[A-Fa-f0-9]{32}\b|\b[A-Fa-f0-9]{40}\b|\b[A-Fa-f0-9]{64}\b"
+    email_regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
+    cve_regex = r"\bCVE-\d{4}-\d{4,7}\b"
+    technique_regex = r"\bT\d{4}(?:\.\d{3})?\b"
+
+    urls = sorted(set(re.findall(url_regex, text, flags=re.IGNORECASE)))
+    ips = sorted(set(re.findall(ip_regex, text)))
+    hashes = sorted(set(re.findall(hash_regex, text)))
+    emails = sorted(set(re.findall(email_regex, text, flags=re.IGNORECASE)))
+    cves = sorted(set(match.upper() for match in re.findall(cve_regex, text, flags=re.IGNORECASE)))
+    techniques = sorted(set(match.upper() for match in re.findall(technique_regex, text, flags=re.IGNORECASE)))
+
+    url_hosts = set()
+    for url_value in urls:
+        try:
+            host = urllib.parse.urlparse(url_value).hostname
+            if host:
+                url_hosts.add(host.lower())
+        except Exception:
+            pass
+
+    domains = sorted(
+        set(d.lower() for d in re.findall(domain_regex, text))
+        - set(em.split("@")[-1].lower() for em in emails)
+        - url_hosts
+    )
+
+    return {
+        "ips": ips,
+        "domains": domains,
+        "urls": urls,
+        "hashes": hashes,
+        "emails": emails,
+        "cves": cves,
+        "mitre_techniques": techniques,
+    }
+
+def _first_observable(observables: dict) -> tuple[Optional[str], str]:
+    for key, obs_type in [("ips", "ip"), ("urls", "url"), ("domains", "domain"), ("hashes", "hash"), ("emails", "email")]:
+        values = observables.get(key) or []
+        if values:
+            return values[0], obs_type
+    return None, "unknown"
+
+async def _fetch_cisa_kev(cve: str) -> dict:
+    source = {
+        "id": "cisa_kev",
+        "name": "CISA Known Exploited Vulnerabilities",
+        "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(source["url"])
+        if resp.status_code >= 400:
+            return {**source, "status": "error", "detail": f"HTTP {resp.status_code}"}
+        data = resp.json()
+        vulns = data.get("vulnerabilities", []) if isinstance(data, dict) else []
+        match = next((item for item in vulns if str(item.get("cveID", "")).upper() == cve.upper()), None)
+        return {**source, "status": "success", "matched": bool(match), "data": match}
+    except Exception as e:
+        return {**source, "status": "unavailable", "detail": str(e)}
+
+async def _fetch_epss(cve: str) -> dict:
+    source = {"id": "epss", "name": "FIRST EPSS", "url": "https://api.first.org/data/v1/epss"}
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(source["url"], params={"cve": cve})
+        if resp.status_code >= 400:
+            return {**source, "status": "error", "detail": f"HTTP {resp.status_code}"}
+        data = resp.json()
+        rows = data.get("data", []) if isinstance(data, dict) else []
+        return {**source, "status": "success", "matched": bool(rows), "data": rows[0] if rows else None}
+    except Exception as e:
+        return {**source, "status": "unavailable", "detail": str(e)}
+
+def _soc_severity(observables: dict, feed_results: list[dict], vuln_results: list[dict], severity_hint: Optional[str]) -> str:
+    if severity_hint:
+        normalized = severity_hint.strip().upper()
+        if normalized in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}:
+            return normalized
+    if any(item.get("matched") for item in vuln_results if item.get("id") == "cisa_kev"):
+        return "CRITICAL"
+    if any(item.get("matched") for item in feed_results):
+        return "HIGH"
+    if observables.get("hashes") or observables.get("cves"):
+        return "MEDIUM"
+    return "LOW"
+
+def _build_hunt_queries(indicator: str, indicator_type: str) -> dict:
+    field_map = {
+        "ip": ("src_ip", "RemoteIP", "source.ip OR destination.ip"),
+        "domain": ("query", "RemoteUrl", "dns.question.name OR url.domain"),
+        "url": ("url", "RemoteUrl", "url.full"),
+        "hash": ("file_hash", "SHA256", "file.hash.sha256 OR file.hash.md5"),
+        "email": ("sender", "SenderFromAddress", "email.from.address"),
+    }
+    splunk_field, kql_field, elastic_field = field_map.get(indicator_type, ("_raw", "*", "*"))
+    quoted = indicator.replace('"', '\\"')
+    return {
+        "splunk": f'index=* {splunk_field}="{quoted}" OR "{quoted}"',
+        "microsoft_defender_kql": f'SearchQuery = "{quoted}"; search in (DeviceNetworkEvents, DeviceFileEvents, EmailEvents) SearchQuery',
+        "sentinel_kql": f'union isfuzzy=true SecurityEvent, DeviceNetworkEvents, DeviceFileEvents, EmailEvents | where * has "{quoted}"',
+        "elastic_lucene": f'({elastic_field}: "{quoted}") OR "{quoted}"',
+    }
+
+def _build_detection_pack(indicator: str, indicator_type: str, title: Optional[str] = None) -> dict:
+    safe_title = title or f"ThreatMap SOC Detection for {indicator_type.upper()} Indicator"
+    rule_id = re.sub(r"[^a-zA-Z0-9]+", "_", indicator.lower()).strip("_")[:48] or "indicator"
+    escaped = indicator.replace("\\", "\\\\").replace('"', '\\"')
+    sigma_field = {
+        "ip": "DestinationIp",
+        "domain": "QueryName",
+        "url": "Url",
+        "hash": "Hashes",
+        "email": "SenderFromAddress",
+    }.get(indicator_type, "CommandLine")
+
+    sigma = f"""title: {safe_title}
+id: threatmap-{rule_id}
+status: experimental
+description: Detects activity involving {indicator}
+references:
+  - https://github.com/SigmaHQ/sigma
+author: ThreatMap
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    {sigma_field}|contains: "{escaped}"
+  condition: selection
+falsepositives:
+  - Legitimate administrator testing
+level: medium
+"""
+
+    suricata = None
+    if indicator_type == "ip":
+        suricata = f'alert ip any any -> {indicator} any (msg:"ThreatMap IOC IP {indicator}"; sid:9000001; rev:1;)'
+    elif indicator_type == "domain":
+        suricata = f'alert dns any any -> any any (msg:"ThreatMap IOC domain {indicator}"; dns.query; content:"{escaped}"; nocase; sid:9000002; rev:1;)'
+    elif indicator_type == "url":
+        parsed = urllib.parse.urlparse(indicator)
+        host = parsed.hostname or indicator
+        path = parsed.path or "/"
+        suricata = f'alert http any any -> any any (msg:"ThreatMap IOC URL {indicator}"; http.host; content:"{host}"; nocase; http.uri; content:"{path}"; sid:9000003; rev:1;)'
+
+    yara = f"""rule ThreatMap_IOC_{rule_id}
+{{
+    meta:
+        description = "ThreatMap generated indicator rule"
+        indicator = "{escaped}"
+        source = "ThreatMap SOC Workbench"
+    strings:
+        $ioc = "{escaped}" nocase
+    condition:
+        $ioc
+}}
+"""
+
+    return {
+        "sigma": sigma,
+        "suricata": suricata,
+        "yara": yara,
+        "hunt_queries": _build_hunt_queries(indicator, indicator_type),
+    }
 
 def _strip_public_feed_lines(text: str) -> list[str]:
     values = []
@@ -650,6 +831,104 @@ async def awesome_ti_lookup(req: AwesomeTILookupRequest):
         "checked_count": len(results),
         "results": results,
         "note": "Only stable public feeds and documented APIs from the awesome-threat-intelligence catalog are queried. Key-required APIs are skipped until ABUSECH_AUTH_KEY is configured.",
+    }
+
+@router.post("/soc/extract")
+async def soc_extract_observables(req: SocTriageRequest):
+    text = req.alert_text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Alert text cannot be empty")
+    return {
+        "source": "threatmap-soc",
+        "status": "success",
+        "observables": _extract_soc_observables(text),
+    }
+
+@router.post("/soc/detection-pack")
+async def soc_detection_pack(req: DetectionPackRequest):
+    indicator = req.indicator.strip()
+    if not indicator:
+        raise HTTPException(status_code=400, detail="Indicator cannot be empty")
+    indicator_type = req.indicator_type.strip().lower()
+    if indicator_type == "auto":
+        indicator_type = _detect_indicator_type(indicator)
+    return {
+        "source": "threatmap-soc",
+        "status": "success",
+        "indicator": indicator,
+        "indicator_type": indicator_type,
+        "content": _build_detection_pack(indicator, indicator_type, req.title),
+        "references": [
+            "https://github.com/SigmaHQ/sigma",
+            "https://suricata.io/",
+            "https://virustotal.github.io/yara/",
+        ],
+    }
+
+@router.post("/soc/triage-pack")
+async def soc_triage_pack(req: SocTriageRequest):
+    text = req.alert_text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Alert text cannot be empty")
+
+    observables = _extract_soc_observables(text)
+    primary_indicator, primary_type = _first_observable(observables)
+    requested_type = req.artifact_type.strip().lower()
+    if requested_type != "auto" and primary_indicator:
+        primary_type = requested_type
+
+    feed_results = []
+    if primary_indicator and primary_type in {"ip", "domain", "url", "hash"}:
+        lookup = await awesome_ti_lookup(AwesomeTILookupRequest(indicator=primary_indicator, indicator_type=primary_type))
+        feed_results = lookup.get("results", [])
+
+    vuln_tasks = []
+    for cve in observables.get("cves", [])[:5]:
+        vuln_tasks.append(_fetch_cisa_kev(cve))
+        vuln_tasks.append(_fetch_epss(cve))
+    vuln_results = await asyncio.gather(*vuln_tasks) if vuln_tasks else []
+
+    severity = _soc_severity(observables, feed_results, vuln_results, req.severity_hint)
+    detection = _build_detection_pack(primary_indicator, primary_type) if primary_indicator else None
+
+    playbook = [
+        "Validate the alert source, timestamp, affected asset, user, and detection logic.",
+        "Preserve volatile evidence: running processes, network connections, command history, and relevant logs.",
+        "Check whether the indicator appears on other hosts, users, email messages, proxy logs, DNS logs, and EDR telemetry.",
+        "Contain affected endpoints or accounts if matching malicious evidence is confirmed.",
+        "Block confirmed malicious IPs, domains, URLs, and hashes at appropriate controls after change approval.",
+        "Open or update an incident case, record decisions, and attach enrichment evidence.",
+    ]
+    if severity in {"HIGH", "CRITICAL"}:
+        playbook.insert(3, "Escalate to incident response lead and begin scope expansion immediately.")
+    if observables.get("cves"):
+        playbook.append("Prioritize patching or compensating controls for CVEs confirmed in CISA KEV or with elevated EPSS.")
+
+    return {
+        "source": "threatmap-soc",
+        "status": "success",
+        "severity": severity,
+        "primary_indicator": primary_indicator,
+        "primary_type": primary_type,
+        "observables": observables,
+        "open_source_enrichment": {
+            "feed_results": feed_results,
+            "vulnerabilities": vuln_results,
+        },
+        "playbook": playbook,
+        "detection_pack": detection,
+        "case_fields": {
+            "title": f"{severity} SOC triage - {primary_indicator or 'unclassified alert'}",
+            "category": "Threat Intelligence / SOC Triage",
+            "recommended_sla": "Immediate" if severity == "CRITICAL" else "4 hours" if severity == "HIGH" else "1 business day",
+            "tags": sorted(set(["soc", "triage", primary_type] + observables.get("mitre_techniques", []))),
+        },
+        "references": [
+            "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+            "https://www.first.org/epss/",
+            "https://github.com/SigmaHQ/sigma",
+            "https://github.com/hslatman/awesome-threat-intelligence",
+        ],
     }
 
 @router.post("/spiderfoot")

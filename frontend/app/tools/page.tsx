@@ -15,7 +15,8 @@ const TOOLS = [
   { id: 'http', name: 'HTTP Security Headers', icon: 'http', desc: 'Check HSTS, CSP, X-Frame-Options' },
   { id: 'dorks', name: 'Google Dorking', icon: 'manage_search', desc: 'Generate advanced search queries for OSINT research' },
   { id: 'spiderfoot', name: 'SpiderFoot Scan', icon: 'travel_explore', desc: 'Start a SpiderFoot OSINT scan from ThreatMap' },
-  { id: 'awesome-ti', name: 'Awesome TI Hub', icon: 'hub', desc: 'Query working feeds from awesome-threat-intelligence' }
+  { id: 'awesome-ti', name: 'Awesome TI Hub', icon: 'hub', desc: 'Query working feeds from awesome-threat-intelligence' },
+  { id: 'soc', name: 'SOC Workbench', icon: 'policy', desc: 'Extract IOCs, enrich alerts, and generate hunt content' }
 ];
 
 export default function ToolsPage() {
@@ -33,6 +34,8 @@ export default function ToolsPage() {
   const [spiderFootScanId, setSpiderFootScanId] = useState("");
   const [spiderFootEventType, setSpiderFootEventType] = useState("ALL");
   const [awesomeTiType, setAwesomeTiType] = useState("auto");
+  const [socType, setSocType] = useState("auto");
+  const [socSeverity, setSocSeverity] = useState("");
 
   const activeToolDef = TOOLS.find(t => t.id === activeTool);
 
@@ -84,6 +87,9 @@ export default function ToolsPage() {
           break;
         case 'awesome-ti':
           res = await api.awesomeTiLookup(input, awesomeTiType);
+          break;
+        case 'soc':
+          res = await api.socTriagePack(input, socType, socSeverity || undefined);
           break;
       }
       setResult(res);
@@ -182,6 +188,29 @@ export default function ToolsPage() {
       setResult(res);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Awesome TI request failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runSocAction = async (action: string) => {
+    if (!input.trim()) return;
+    setIsLoading(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      let res;
+      if (action === "extract") {
+        res = await api.socExtract(input, socType);
+      } else if (action === "detect") {
+        res = await api.socDetectionPack(input, socType);
+      } else {
+        res = await api.socTriagePack(input, socType, socSeverity || undefined);
+      }
+      setResult(res);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "SOC request failed");
     } finally {
       setIsLoading(false);
     }
@@ -545,6 +574,104 @@ export default function ToolsPage() {
           <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[420px] custom-scrollbar">
             <pre className="text-xs text-emerald-400 font-mono">{JSON.stringify(result, null, 2)}</pre>
           </div>
+        </div>
+      );
+    }
+
+    if (activeTool === 'soc') {
+      const observables = result.observables || {};
+      const detection = result.detection_pack || result.content;
+      const feedResults = result.open_source_enrichment?.feed_results || [];
+      const vulnResults = result.open_source_enrichment?.vulnerabilities || [];
+      const severity = result.severity || "INFO";
+      const sevClass = severity === "CRITICAL" || severity === "HIGH"
+        ? "bg-error-container/10 border-error/20 text-error"
+        : severity === "MEDIUM"
+          ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300"
+          : "bg-emerald-500/10 border-emerald-500/20 text-emerald-300";
+
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className={`p-4 rounded-xl border ${sevClass}`}>
+              <div className="text-xs uppercase tracking-wider mb-1">SOC Severity</div>
+              <div className="text-2xl font-black">{severity}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Primary IOC</div>
+              <div className="text-sm font-mono text-white break-all">{result.primary_indicator || result.indicator || "None"}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Feed Matches</div>
+              <div className="text-lg font-bold text-primary">{feedResults.filter((item: any) => item.matched).length}</div>
+            </div>
+          </div>
+
+          {Object.keys(observables).length > 0 && (
+            <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
+              <h4 className="text-sm font-bold text-white mb-3">Extracted Observables</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Object.entries(observables).map(([key, values]: [string, any]) => (
+                  <div key={key} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-2">{key.replaceAll("_", " ")}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {(values || []).length > 0 ? values.map((value: string) => (
+                        <span key={value} className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded break-all">
+                          {value}
+                        </span>
+                      )) : <span className="text-xs text-on-surface-variant">None</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.playbook?.length > 0 && (
+            <div className="bg-surface-container-low border border-white/5 rounded-xl p-4">
+              <h4 className="text-sm font-bold text-white mb-3">SOC Playbook</h4>
+              <ol className="space-y-2">
+                {result.playbook.map((step: string, idx: number) => (
+                  <li key={step} className="flex gap-3 text-sm text-on-surface-variant">
+                    <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {detection?.hunt_queries && (
+            <div className="bg-[#111827] border border-white/5 rounded-xl p-4">
+              <h4 className="text-sm font-bold text-white mb-3">Hunt Queries</h4>
+              <div className="space-y-3">
+                {Object.entries(detection.hunt_queries).map(([name, query]: [string, any]) => (
+                  <div key={name}>
+                    <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">{name.replaceAll("_", " ")}</div>
+                    <code className="block text-xs text-emerald-400 bg-black/30 border border-white/10 rounded-lg p-3 break-all">{query}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {detection && (
+            <div className="grid grid-cols-1 gap-4">
+              {["sigma", "suricata", "yara"].map((key) => detection[key] && (
+                <div key={key} className="bg-[#111827] border border-white/5 rounded-xl p-4">
+                  <h4 className="text-sm font-bold text-white mb-3 uppercase">{key}</h4>
+                  <pre className="text-xs text-primary whitespace-pre-wrap break-all font-mono">{detection[key]}</pre>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(feedResults.length > 0 || vulnResults.length > 0) && (
+            <div className="bg-surface-container-low border border-white/5 rounded-xl p-4">
+              <h4 className="text-sm font-bold text-white mb-3">Open-Source Enrichment</h4>
+              <pre className="text-xs text-emerald-400 whitespace-pre-wrap break-all font-mono">{JSON.stringify(result.open_source_enrichment, null, 2)}</pre>
+            </div>
+          )}
         </div>
       );
     }

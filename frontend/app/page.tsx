@@ -44,6 +44,44 @@ export default function Home() {
   const handleScan = async (indicator: string, type: "ip" | "url" | "domain" | "hash" | "bulk" | "cve") => {
     setIsLoading(true);
     setScanError("");
+    // Start advanced OSINT prefetch immediately so panels have data when results open
+    (async function prefetchAdvanced() {
+      try {
+        const key = `preload:${indicator}:${type}`;
+        if (type === "bulk" || type === "cve") return;
+
+        const prefetchPromises: Promise<any>[] = [];
+        if (type === "ip") {
+          prefetchPromises.push(api.getReverseDns(indicator).then(r => ({ k: 'reverseDns', v: r })));
+          prefetchPromises.push(api.getPorts(indicator).then(r => ({ k: 'ports', v: r })));
+          prefetchPromises.push(api.getAsnDetails(indicator).then(r => ({ k: 'asn', v: r })));
+          prefetchPromises.push(api.getSsl(indicator).then(r => ({ k: 'ssl', v: r })));
+          prefetchPromises.push(api.getShodan(indicator).then(r => ({ k: 'shodan', v: r })));
+        } else if (type === "domain" || type === "url") {
+          let domain = indicator;
+          if (type === "url") {
+            try { domain = new URL(indicator).hostname; } catch (e) { domain = indicator; }
+          }
+          prefetchPromises.push(api.getWhois(domain).then(r => ({ k: 'whois', v: r })));
+          prefetchPromises.push(api.getSsl(domain).then(r => ({ k: 'ssl', v: r })));
+          prefetchPromises.push(api.getSubdomains(domain).then(r => ({ k: 'subdomains', v: r })));
+          prefetchPromises.push(api.getDnsRecords(domain).then(r => ({ k: 'dns', v: r })));
+          prefetchPromises.push(api.getWebVulns(domain).then(r => ({ k: 'webvulns', v: r })));
+          prefetchPromises.push(api.getTechStack(domain).then(r => ({ k: 'techStack', v: r })));
+        }
+
+        const settled = await Promise.allSettled(prefetchPromises);
+        const out: any = {};
+        for (const s of settled) {
+          if (s.status === 'fulfilled' && s.value && s.value.k) {
+            out[s.value.k] = s.value.v;
+          }
+        }
+        try { sessionStorage.setItem(key, JSON.stringify(out)); } catch (e) { /* ignore */ }
+      } catch (e) {
+        // ignore prefetch errors
+      }
+    })();
     try {
       if (type === "bulk") {
         const indicators = indicator.split(/[\n,]+/).map(i => i.trim()).filter(i => i.length > 0);

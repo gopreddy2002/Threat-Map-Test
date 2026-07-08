@@ -325,6 +325,28 @@ export const api = {
     });
     return response.data;
   },
+  socExtract: async (alertText: string, artifactType: string = "auto") => {
+    const response = await apiClient.post(`/tools/soc/extract`, {
+      alert_text: alertText,
+      artifact_type: artifactType,
+    });
+    return response.data;
+  },
+  socDetectionPack: async (indicator: string, indicatorType: string = "auto") => {
+    const response = await apiClient.post(`/tools/soc/detection-pack`, {
+      indicator,
+      indicator_type: indicatorType,
+    });
+    return response.data;
+  },
+  socTriagePack: async (alertText: string, artifactType: string = "auto", severityHint?: string) => {
+    const response = await apiClient.post(`/tools/soc/triage-pack`, {
+      alert_text: alertText,
+      artifact_type: artifactType,
+      severity_hint: severityHint || null,
+    });
+    return response.data;
+  },
   toolsSpiderFoot: async (target: string, targetType: string = "domain", useCase: string = "passive") => {
     const response = await apiClient.post(`/tools/spiderfoot`, {
       target,

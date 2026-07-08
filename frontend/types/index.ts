@@ -55,3 +55,11 @@ export interface DashboardStats {
     trend: "up" | "down";
   }>;
 }
+
+export interface AttackPrediction {
+  predicted_attack_type: string;
+  predicted_target_region: string;
+  confidence_level: "Low" | "Medium" | "High";
+  estimated_time: string;
+  explanation: string;
+}

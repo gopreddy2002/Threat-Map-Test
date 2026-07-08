@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 try:
     from core.config import settings
     from models.database import init_db, get_db, Scan, Watchlist, Alert
-    from models.schemas import DashboardStats
+    from models.schemas import AttackPrediction, DashboardStats
     from alert_models import AlertRule, AlertNotification
     from alert_routes import router as alert_router
     print("Core imports OK")
@@ -494,6 +494,63 @@ async def get_api_health():
         statuses = await asyncio.gather(*tasks)
         
     return {"apis": statuses}
+
+
+@app.get(f"{settings.API_V1_STR}/dashboard/prediction/", response_model=AttackPrediction, tags=["Telemetry"])
+def get_attack_prediction(db: Session = Depends(get_db)):
+    """Return a lightweight attack prediction payload for the dashboard widgets."""
+    from sqlalchemy import func
+
+    total_scans = db.query(Scan).count()
+    high_or_critical = db.query(Scan).filter(Scan.risk_level.in_(["HIGH", "CRITICAL"])).count()
+    most_common_type = (
+        db.query(Scan.type, func.count(Scan.id).label("scan_count"))
+        .group_by(Scan.type)
+        .order_by(func.count(Scan.id).desc())
+        .first()
+    )
+
+    type_value = (most_common_type.type if most_common_type else "").lower()
+    prediction_by_type = {
+        "ip": ("Command-and-Control Beaconing", "Network edge and exposed services"),
+        "domain": ("Phishing Infrastructure / Brand Abuse", "User-facing web and email channels"),
+        "url": ("Drive-by Payload Delivery", "Browser and web gateway traffic"),
+        "hash": ("Malware Reuse / Payload Resurgence", "Endpoint fleet and file ingress points"),
+    }
+    predicted_attack_type, predicted_target_region = prediction_by_type.get(
+        type_value,
+        ("Credential Stuffing / MFA Bypass", "Identity and authentication surfaces"),
+    )
+
+    if total_scans == 0:
+        confidence_level = "Low"
+        estimated_time = "Insufficient telemetry"
+        explanation = "No scan history is available yet, so this prediction uses a conservative baseline until live telemetry accumulates."
+    else:
+        high_risk_ratio = high_or_critical / total_scans
+        if high_risk_ratio >= 0.35:
+            confidence_level = "High"
+            estimated_time = "Next 12-24h"
+        elif high_risk_ratio >= 0.15:
+            confidence_level = "Medium"
+            estimated_time = "Next 24-48h"
+        else:
+            confidence_level = "Low"
+            estimated_time = "Next 3-5 days"
+
+        scan_type = type_value.upper() if type_value else "IOC"
+        explanation = (
+            f"{high_or_critical} of {total_scans} scans are high or critical risk, "
+            f"with {scan_type} indicators currently leading dashboard activity."
+        )
+
+    return AttackPrediction(
+        predicted_attack_type=predicted_attack_type,
+        predicted_target_region=predicted_target_region,
+        confidence_level=confidence_level,
+        estimated_time=estimated_time,
+        explanation=explanation,
+    )
 
 
 @app.get(f"{settings.API_V1_STR}/dashboard/telemetry", tags=["Telemetry"])

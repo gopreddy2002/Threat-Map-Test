@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats } from "../types";
+import { ScanResponse, WatchlistResponse, AlertResponse, DashboardStats, AttackPrediction } from "../types";
 
 export function normalizeApiBaseUrl(value?: string): string {
   let base = value || "/api/v1";
@@ -12,8 +12,11 @@ export function normalizeApiBaseUrl(value?: string): string {
   return base.endsWith("/api/v1") ? base : `${base}/api/v1`;
 }
 
+const isDevelopment = process.env.NODE_ENV === "development";
 const base = normalizeApiBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isDevelopment ? "http://127.0.0.1:8000" : "/")
 );
 
 export const API_BASE_URL = base;
@@ -475,8 +478,8 @@ export const api = {
     return `${API_BASE_URL}/bulk-upload/template`;
   },
 
-  getAttackPrediction: async () => {
-    const response = await apiClient.get("/dashboard/prediction/");
+  getAttackPrediction: async (): Promise<AttackPrediction> => {
+    const response = await apiClient.get<AttackPrediction>("/dashboard/prediction/");
     return response.data;
   },
 

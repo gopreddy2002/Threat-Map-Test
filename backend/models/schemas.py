@@ -84,6 +84,13 @@ class DashboardStats(BaseModel):
     threat_distribution: Dict[str, int] # e.g. {"critical": 25, "high": 35, "medium": 30, "low": 10}
     malware_prevalence: List[Dict[str, Any]] # e.g. [{"name": "Ransom.LockBit", "percentage": 82, "trend": "up"}]
 
+class AttackPrediction(BaseModel):
+    predicted_attack_type: str
+    predicted_target_region: str
+    confidence_level: str
+    estimated_time: str
+    explanation: str
+
 class IncidentCaseBase(BaseModel):
     title: str
     description: Optional[str] = None

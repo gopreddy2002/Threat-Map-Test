@@ -169,6 +169,11 @@ export const api = {
     return response.data;
   },
 
+  investigateDarkWeb: async (query: string, limit: number = 5) => {
+    const response = await apiClient.post(`/osint/darkweb/investigate`, { query, limit });
+    return response.data;
+  },
+
   getWebVulns: async (domain: string) => {
     const response = await apiClient.get(`/osint/web-vulns/${domain}`);
     return response.data;

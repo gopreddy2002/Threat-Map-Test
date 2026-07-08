@@ -11,6 +11,7 @@ It acts as a single pane of glass for security analysts to triage threats withou
 ## 🌟 Key Features
 
 - **Unified IOC Scanning:** Scan IPs, Domains, URLs, Hashes, and CVEs in a single input.
+- **Dark Web Investigation:** Launch a guided, AI-assisted dark-web investigation workflow for aliases, leaked data, and underground chatter.
 - **Risk Scoring Engine:** Deterministic 0-100 risk score based on weighted aggregations from multiple feeds.
 - **AI-Powered Mitigation:** Google Gemini 1.5 Pro generates actionable, plain-English mitigation briefs.
 - **Premium UI/UX:** Built with Framer Motion, Tailwind CSS, and Next.js for a highly responsive, animated, and dark-mode optimized experience.

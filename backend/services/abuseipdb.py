@@ -1,7 +1,7 @@
 import logging
 import httpx
 from typing import Dict, Any
-from core.config import settings
+from core.config import settings, is_configured_secret
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,12 @@ class AbuseIPDBService:
             "verbose": "true"
         }
         
-        if not self.api_key or len(self.api_key) < 10:
-            logger.warning("AbuseIPDB API key missing or invalid. Returning clean fallback.")
+        if not is_configured_secret(self.api_key):
+            logger.warning("AbuseIPDB API key missing or placeholder. Skipping live lookup.")
             return self._get_fallback_data(ip)
 
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
-        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+        async with httpx.AsyncClient(transport=transport, timeout=8.0) as client:
             try:
                 response = await client.get(url, headers=self.headers, params=params)
                 if response.status_code == 200:

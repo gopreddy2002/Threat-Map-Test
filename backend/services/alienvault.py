@@ -1,7 +1,7 @@
 import logging
 import httpx
 from typing import Dict, Any
-from core.config import settings
+from core.config import settings, is_configured_secret
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,12 @@ class AlienVaultService:
 
         url = f"{self.base_url}/{slug}/{indicator}/general"
 
-        if not self.api_key or "85a8bcfbf" not in self.api_key:
-            logger.warning("AlienVault OTX API key missing or invalid. Returning fallback data.")
+        if not is_configured_secret(self.api_key):
+            logger.warning("AlienVault OTX API key missing or placeholder. Skipping live lookup.")
             return self._get_fallback_data(indicator)
 
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
-        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+        async with httpx.AsyncClient(transport=transport, timeout=8.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:
@@ -62,9 +62,9 @@ class AlienVaultService:
 
     def _get_fallback_data(self, indicator: str) -> Dict[str, Any]:
         return {
-            "pulse_count": 24,
-            "tags": ["Emotet", "C2", "Botnet", "Malicious-IP", "Brute-Force"],
-            "malware_families": ["Emotet", "CobaltStrike"],
+            "pulse_count": 0,
+            "tags": [],
+            "malware_families": [],
             "status": "fallback",
             "raw": None
         }

@@ -42,11 +42,11 @@ async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
         try:
             domain_part = urllib.parse.urlparse(target_url).hostname or target_url
             
-            vt_task = asyncio.wait_for(virustotal_service.get_url_report(target_url), timeout=30.0)
-            urlscan_task = asyncio.wait_for(urlscan_service.search_indicator(target_url, "url"), timeout=8.0)
-            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(target_url, "url"), timeout=8.0)
-            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(domain_part), timeout=30.0)
-            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(target_url), timeout=30.0)
+            vt_task = asyncio.wait_for(virustotal_service.get_url_report(target_url), timeout=8.0)
+            urlscan_task = asyncio.wait_for(urlscan_service.search_indicator(target_url, "url"), timeout=6.0)
+            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(target_url, "url"), timeout=6.0)
+            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(domain_part), timeout=2.0)
+            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(target_url), timeout=2.0)
 
             vt_res, urlscan_res, otx_res, whoisjson_res, domainscan_res = await asyncio.gather(
                 vt_task, urlscan_task, otx_task, whoisjson_task, domainscan_task,

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export const ConnectionBanner: React.FC = () => {
   const [isOffline, setIsOffline] = useState(false);
@@ -11,14 +12,9 @@ export const ConnectionBanner: React.FC = () => {
   countdownRef.current = countdown;
 
   useEffect(() => {
-    let BASE = process.env.NEXT_PUBLIC_API_URL || "https://threatmap-production.up.railway.app/api/v1";
-    if (BASE && !BASE.endsWith('/api/v1')) {
-      BASE = BASE.replace(/\/$/, '') + '/api/v1';
-    }
-
     const pingHealth = async (): Promise<boolean> => {
       try {
-        const res = await fetch(`${BASE}/health`, {
+        const res = await fetch(`${API_BASE_URL}/health`, {
           signal: AbortSignal.timeout(4000),
           cache: "no-store",
         });

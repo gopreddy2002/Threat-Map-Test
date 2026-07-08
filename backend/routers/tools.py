@@ -8,6 +8,7 @@ import re
 from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 import httpx
+from core.config import settings
 
 try:
     import dns.asyncresolver
@@ -321,16 +322,92 @@ async def enumerate_dns(domain: str = Query(..., description="Domain to enumerat
     }
 
 @router.get("/shodan")
-async def shodan_internetdb(ip: str = Query(..., description="IP to scan via InternetDB")):
+async def shodan_host_lookup(ip: str = Query(..., description="IP to scan via Shodan")):
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid IP address")
+
+    api_key = settings.SHODAN_API_KEY
+
+    if api_key:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(
+                    f"https://api.shodan.io/shodan/host/{ip}",
+                    params={"key": api_key},
+                )
+
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_vulns = data.get("vulns") or {}
+                vulns = list(raw_vulns.keys()) if isinstance(raw_vulns, dict) else list(raw_vulns)
+                services = [
+                    {
+                        "port": item.get("port"),
+                        "transport": item.get("transport"),
+                        "product": item.get("product"),
+                        "version": item.get("version"),
+                        "module": item.get("_shodan", {}).get("module"),
+                        "banner": (item.get("data") or "").strip()[:500],
+                    }
+                    for item in data.get("data", [])[:20]
+                ]
+
+                return {
+                    "source": "shodan",
+                    "ip": data.get("ip_str", ip),
+                    "hostnames": data.get("hostnames", []),
+                    "domains": data.get("domains", []),
+                    "ports": data.get("ports", []),
+                    "vulns": vulns,
+                    "services": services,
+                    "os": data.get("os"),
+                    "org": data.get("org"),
+                    "isp": data.get("isp"),
+                    "asn": data.get("asn"),
+                    "country": data.get("country_name"),
+                    "city": data.get("city"),
+                    "last_update": data.get("last_update"),
+                    "status": "success",
+                }
+
+            if resp.status_code == 404:
+                return {"source": "shodan", "ip": ip, "status": "not_found", "detail": "No Shodan data found for this IP."}
+
+            return {
+                "source": "shodan",
+                "ip": ip,
+                "status": "error",
+                "detail": f"Shodan API returned {resp.status_code}",
+                "response": resp.text[:300],
+            }
+        except Exception as e:
+            # Fall through to InternetDB below for a lightweight backup.
+            shodan_error = str(e)
+    else:
+        shodan_error = "SHODAN_API_KEY is not configured"
+
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(f"https://internetdb.shodan.io/{ip}", timeout=5.0)
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                return {
+                    "source": "internetdb",
+                    "ip": ip,
+                    "ports": data.get("ports", []),
+                    "vulns": data.get("vulns", []),
+                    "hostnames": data.get("hostnames", []),
+                    "cpes": data.get("cpes", []),
+                    "tags": data.get("tags", []),
+                    "status": "success",
+                    "shodan_error": shodan_error,
+                }
             elif resp.status_code == 404:
-                return {"ip": ip, "message": "No data found in InternetDB"}
+                return {"source": "internetdb", "ip": ip, "status": "not_found", "message": "No data found in Shodan or InternetDB", "shodan_error": shodan_error}
             else:
-                return {"error": f"InternetDB returned {resp.status_code}"}
+                return {"source": "internetdb", "ip": ip, "status": "error", "error": f"InternetDB returned {resp.status_code}", "shodan_error": shodan_error}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

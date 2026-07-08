@@ -102,7 +102,7 @@ export const RiskGauge: React.FC<RiskGaugeProps> = ({
 
       {/* Feed count */}
       <p className="text-[10px] text-on-surface-variant/60 font-mono-sm text-center">
-        Aggregated from {feedCount} security feeds
+        {feedCount > 0 ? `Aggregated from ${feedCount} security feed${feedCount === 1 ? "" : "s"}` : "No live security feeds returned data"}
       </p>
     </div>
   );

@@ -13,6 +13,7 @@ import WebVulnReport from "@/components/WebVulnReport";
 import CommunityNotes from "@/components/CommunityNotes";
 import DomainScanMetrics from "@/components/DomainScanMetrics";
 import WhoisJsonData from "@/components/WhoisJsonData";
+import ThreatIntelEvidence from "@/components/ThreatIntelEvidence";
 import dynamic from "next/dynamic";
 import { Download, Plus, Check, Share2, Target, FileCode2, AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -220,7 +221,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
   // Determine if location coordinates are available
   const ipinfo = raw.ipinfo || {};
-  const hasCoordinates = !!(ipinfo.lat && ipinfo.lon);
+  const hasCoordinates = ipinfo.status === "success" && typeof ipinfo.lat === "number" && typeof ipinfo.lon === "number";
 
   // MITRE ATT&CK Grid Data — ONLY activate tactics confirmed by AI, never by score thresholds
   const aiMitre = Array.isArray(ai.mitre_tactics) ? ai.mitre_tactics : [];
@@ -243,7 +244,17 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
 
   // ── Plain-English risk summary ───────────────────────────────────────────
-  function getPlainEnglishSummary(score: number) {
+  function getPlainEnglishSummary(score: number, liveFeeds: number) {
+    if (liveFeeds === 0) {
+      return {
+        emoji: "?",
+        color: "border-sky-500/30 bg-sky-500/10",
+        titleColor: "text-sky-300",
+        title: "UNVERIFIED",
+        text: "Live reputation feeds did not return data. Treat this result as inconclusive and re-scan after API access is restored.",
+      };
+    }
+
     if (score < 30) {
       return {
         emoji: "✅",
@@ -280,13 +291,50 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   }
 
   // ── Risk breakdown weights ───────────────────────────────────────────────
-  const vtScore    = Math.min(100, (vt.malicious || 0) * 5);
-  const abuseScore = abuse.abuseConfidenceScore || 0;
-  const gnScore    = gn.classification === "malicious" ? 80 : gn.noise ? 30 : 0;
-  const plainEnglish = getPlainEnglishSummary(scan.risk_score);
+  const vtStats = vt.raw?.data?.attributes?.last_analysis_stats || vt.data?.attributes?.last_analysis_stats || vt;
+  const vtMalicious = Number(vtStats.malicious || 0);
+  const vtSuspicious = Number(vtStats.suspicious || 0);
+  const vtHarmless = Number(vtStats.harmless || 0);
+  const vtUndetected = Number(vtStats.undetected || 0);
+  const vtTotal = vtMalicious + vtSuspicious + vtHarmless + vtUndetected;
+  const vtScore = vtMalicious === 0 ? 0 : vtMalicious <= 3 ? 25 : vtMalicious <= 10 ? 60 : 100;
 
+  const abuseData = abuse.data || abuse.raw || abuse;
+  const abuseScore = Number(abuseData.abuseConfidenceScore || 0);
+  const abuseReports = Number(abuseData.totalReports || 0);
+  const abuseLastReported = abuseData.lastReportedAt || abuseData.lastReported || null;
+
+  const gnData = gn.raw || gn;
+  const gnClassification = gn.classification || gnData.classification || "unknown";
+  const gnNoise = Boolean(gn.noise ?? gnData.noise);
+  const gnName = gn.name || gnData.name || (gnNoise ? "Observed scanner" : "Not seen");
+  const gnScore = gnClassification === "malicious" ? 100 : gnNoise ? 30 : 0;
+
+  const isRealFeedResult = (feed: any) => {
+    if (!feed || Object.keys(feed).length === 0) return false;
+    const status = String(feed.status || feed.overall_status || "").toLowerCase();
+    return !["fallback", "error", "unavailable"].includes(status);
+  };
+  const vtLive = isRealFeedResult(vt);
+  const abuseLive = isRealFeedResult(abuse);
+  const gnLive = isRealFeedResult(gn);
+  const otxLive = isRealFeedResult(otx);
+  const urlscanLive = isRealFeedResult(urlscan);
+
+  const otxPulseCount = otxLive ? Number(otx.pulse_count || otx.pulseCount || otx.raw?.pulse_info?.count || 0) : 0;
+  const otxTags = otxLive && Array.isArray(otx.tags) ? otx.tags : [];
+  const urlscanScreenshotUrl = urlscanLive ? urlscan.screenshot_url : "";
+  const urlscanStatus = urlscanLive ? (urlscan.overall_status || (urlscanScreenshotUrl ? "success" : "no results")) : "unavailable";
+  const aiPlaybook = Array.isArray(ai.playbook) ? ai.playbook : [];
+  const aiRecommendations = Array.isArray(ai.recommendations)
+    ? ai.recommendations
+    : ai.recommendations
+      ? [ai.recommendations]
+      : [];
+  const reportSummary = scan.summary || ai.summary || "No analyst summary was returned for this scan.";
   // count active feeds
-  const activeFeedCount = [vt, abuse, gn, otx, urlscan].filter(f => Object.keys(f).length > 0).length || 5;
+  const activeFeedCount = [vt, abuse, gn, otx, urlscan].filter(isRealFeedResult).length;
+  const plainEnglish = getPlainEnglishSummary(scan.risk_score, activeFeedCount);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
@@ -490,6 +538,8 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      <ThreatIntelEvidence scan={scan} />
+
       {/* Analytics Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Cell 1: Risk Gauge + Breakdown */}
@@ -550,40 +600,44 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             </div>
             <div>
               <p className="text-[11px] font-mono-sm uppercase text-primary font-bold mb-1">
-                Category: {ai.threat_category || "Botnet C2"}
+                Category: {ai.threat_category || "General reputation"}
               </p>
-              <p className="text-sm text-on-surface leading-relaxed">{scan.summary}</p>
+              <p className="text-sm text-on-surface leading-relaxed">{reportSummary}</p>
             </div>
-            {ai.playbook && ai.playbook.length > 0 ? (
+            {aiPlaybook.length > 0 ? (
               <div className="mt-4 border-t border-white/5 pt-4">
                 <p className="text-[11px] font-mono-sm uppercase text-error font-bold mb-3 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[14px]">local_police</span>
                   Incident Remediation Playbook
                 </p>
                 <div className="space-y-2">
-                  {ai.playbook.map((step: string, idx: number) => (
+                  {aiPlaybook.map((step: string, idx: number) => (
                     <div key={idx} className="flex items-start gap-2 text-xs bg-error/10 border border-error/20 p-2 rounded-lg">
                       <div className="w-5 h-5 rounded-full bg-error/20 flex items-center justify-center shrink-0 mt-0.5">
                         <span className="text-error font-bold text-[10px]">{idx + 1}</span>
                       </div>
-                      <span className="text-error/90 leading-relaxed mt-0.5">{step.replace(/^\d+\.\s*/, '')}</span>
+                      <span className="text-error/90 leading-relaxed mt-0.5">{String(step).replace(/^\d+\.\s*/, '')}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : ai.recommendations ? (
+            ) : aiRecommendations.length > 0 ? (
               <div className="mt-4 border-t border-white/5 pt-4">
                 <p className="text-[11px] font-mono-sm uppercase text-error font-bold mb-1">
                   Mitigation Plan
                 </p>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  {ai.recommendations}
-                </p>
+                <ul className="space-y-1.5">
+                  {aiRecommendations.map((recommendation: string, idx: number) => (
+                    <li key={idx} className="text-xs text-on-surface-variant leading-relaxed">
+                      {String(recommendation)}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
           </div>
           <div className="text-[10px] text-on-surface-variant/60 font-mono-sm mt-4 text-right">
-            Generated via Gemini 1.5 Flash - Structured Mode
+            Analyst brief generated from available scan evidence
           </div>
         </div>
       </div>
@@ -631,18 +685,22 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           <DetectionCard
             title="VirusTotal"
             subtitle="Checked by 90+ antivirus engines worldwide"
-            status={`${vt.malicious || 0} / ${(vt.malicious || 0) + (vt.harmless || 0)} flags`}
-            isMalicious={vt.malicious > 0}
+            status={vtLive ? `${vtMalicious} / ${vtTotal || "unknown"} flags` : "unavailable"}
+            isMalicious={vtLive && vtMalicious > 0}
             iconName="security"
           >
             <div className="text-[11px] font-mono-sm space-y-1 text-on-surface-variant">
               <div className="flex justify-between">
                 <span>Malicious engines:</span>
-                <span className="text-white font-bold">{vt.malicious || 0}</span>
+                <span className="text-white font-bold">{vtMalicious}</span>
               </div>
               <div className="flex justify-between">
-                <span>Undetected:</span>
-                <span className="text-white">{vt.harmless || 0}</span>
+                <span>Suspicious engines:</span>
+                <span className="text-white">{vtSuspicious}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Harmless / undetected:</span>
+                <span className="text-white">{vtHarmless + vtUndetected}</span>
               </div>
             </div>
           </DetectionCard>
@@ -652,18 +710,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             <DetectionCard
               title="AbuseIPDB"
               subtitle="Community-sourced abuse reports"
-              status={`${abuse.abuseConfidenceScore || 0}% abuse`}
-              isMalicious={abuse.abuseConfidenceScore > 0}
+              status={abuseLive ? `${abuseScore}% abuse` : "unavailable"}
+              isMalicious={abuseLive && abuseScore > 0}
               iconName="gpp_bad"
             >
               <div className="text-[11px] font-mono-sm space-y-1 text-on-surface-variant">
                 <div className="flex justify-between">
                   <span>Total Reports:</span>
-                  <span className="text-white font-bold">{abuse.totalReports || 0}</span>
+                  <span className="text-white font-bold">{abuseReports}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Last Reported:</span>
-                  <span className="text-white">{abuse.lastReportedAt ? new Date(abuse.lastReportedAt).toLocaleDateString() : "Never"}</span>
+                  <span className="text-white">{abuseLastReported ? new Date(abuseLastReported).toLocaleDateString() : "Never"}</span>
                 </div>
               </div>
             </DetectionCard>
@@ -674,18 +732,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             <DetectionCard
               title="GreyNoise"
               subtitle="Internet background noise check"
-              status={gn.classification || "unknown"}
-              isMalicious={gn.classification === "malicious"}
+              status={gnLive ? gnClassification : "unavailable"}
+              isMalicious={gnLive && gnClassification === "malicious"}
               iconName="hearing"
             >
               <div className="text-[11px] font-mono-sm space-y-1 text-on-surface-variant">
                 <div className="flex justify-between">
                   <span>Known Scanner:</span>
-                  <span className="text-white font-bold">{gn.noise ? "YES" : "NO"}</span>
+                  <span className="text-white font-bold">{gnNoise ? "YES" : "NO"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Scanner Name:</span>
-                  <span className="text-white">{gn.name || "N/A"}</span>
+                  <span className="text-white">{gnName}</span>
                 </div>
               </div>
             </DetectionCard>
@@ -695,13 +753,13 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           <DetectionCard
             title="AlienVault OTX"
             subtitle="Global threat intelligence feeds"
-            status={`${otx.pulse_count || 0} pulses`}
-            isMalicious={otx.pulse_count > 0}
+            status={`${otxPulseCount} pulses`}
+            isMalicious={otxPulseCount > 0}
             iconName="hub"
           >
-            {otx.tags && otx.tags.length > 0 && (
+            {otxTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {otx.tags.slice(0, 4).map((tag: string) => (
+                {otxTags.slice(0, 4).map((tag: string) => (
                   <span
                     key={tag}
                     className="text-[9px] font-mono-sm bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-on-surface-variant"
@@ -737,14 +795,14 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             <DetectionCard
               title="URLScan Sandbox"
               subtitle="Visual screenshot & link safety check"
-              status={urlscan.overall_status || (urlscan.screenshot_url ? "success" : "pending")}
+              status={urlscanStatus}
               isMalicious={false}
               iconName="pageview"
             >
               <div className="relative mt-2 h-24 rounded border border-white/5 overflow-hidden group cursor-zoom-in bg-surface-container-low flex items-center justify-center">
-                {urlscan.screenshot_url ? (
+                {urlscanScreenshotUrl ? (
                   <img
-                    src={urlscan.screenshot_url}
+                    src={urlscanScreenshotUrl}
                     alt="URLScan Screenshot"
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                     onError={(e) => {
@@ -761,12 +819,12 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                   />
                 ) : null}
                 
-                <div className={`fallback-ui flex flex-col items-center justify-center text-on-surface-variant/40 ${urlscan.screenshot_url ? 'hidden absolute inset-0' : 'w-full h-full'}`}>
+                <div className={`fallback-ui flex flex-col items-center justify-center text-on-surface-variant/40 ${urlscanScreenshotUrl ? 'hidden absolute inset-0' : 'w-full h-full'}`}>
                   <span className="material-symbols-outlined text-[24px] mb-1 opacity-50">image_not_supported</span>
-                  <span className="text-[9px] font-mono-sm">Scan Pending or Unavailable</span>
+                  <span className="text-[9px] font-mono-sm">URLScan unavailable or no result</span>
                 </div>
 
-                {urlscan.screenshot_url && (
+                {urlscanScreenshotUrl && (
                   <div className="overlay-ui absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                     <span className="text-[10px] text-white font-mono-sm">View sandbox report</span>
                   </div>
@@ -813,14 +871,14 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       <AdvancedOsintPanels scan={scan} />
 
       {/* DomainScan Analytics */}
-      {scan.raw_data?.domainscan && (
+      {scan.raw_data?.domainscan?.status === "success" && (
         <div className="mt-8">
           <DomainScanMetrics data={scan.raw_data.domainscan} />
         </div>
       )}
 
       {/* WhoisJSON Deep Inspection */}
-      {scan.raw_data?.whoisjson && (
+      {scan.raw_data?.whoisjson?.status === "success" && (
         <WhoisJsonData data={scan.raw_data.whoisjson} />
       )}
 

@@ -13,9 +13,16 @@ class DomainScanService:
 
     async def get_scan_data(self, indicator: str) -> Dict[str, Any]:
         """
-        Simulates fetching high-performance DomainScan diagnostic data.
-        Handles both domains and IPs.
+        Placeholder for a future DomainScan integration.
+
+        Accuracy rule: do not return simulated diagnostics as if they came from
+        a live provider.
         """
+        return {
+            "status": "unavailable",
+            "message": "DomainScan provider is not configured for live lookups."
+        }
+
         try:
             # Simulate sub-second latency (~240ms)
             await asyncio.sleep(0.24)

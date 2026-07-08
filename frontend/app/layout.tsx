@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import AppLayout from "@/components/AppLayout";
 import Providers from "@/components/Providers";
@@ -8,14 +8,14 @@ import CyberBackground from "@/components/CyberBackground";
 import { ChatProvider } from "@/context/ChatContext";
 import ChatWidget from "@/components/ChatWidget";
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  src: "./fonts/GeistVF.woff",
   variable: "--font-inter",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrains = localFont({
+  src: "./fonts/GeistMonoVF.woff",
   variable: "--font-jetbrains",
   display: "swap",
 });

@@ -13,9 +13,16 @@ class WhoisJsonService:
 
     async def get_domain_data(self, domain: str) -> Dict[str, Any]:
         """
-        Simulates fetching comprehensive WHOIS/DNS data from WhoisJSON.
-        Handles both Domains and IPs.
+        Placeholder for a future WhoisJSON integration.
+
+        Accuracy rule: do not return simulated registration data as if it came
+        from a live provider.
         """
+        return {
+            "status": "unavailable",
+            "message": "WhoisJSON provider is not configured for live lookups."
+        }
+
         try:
             # Simulate network latency (200-500ms)
             await asyncio.sleep(random.uniform(0.2, 0.5))

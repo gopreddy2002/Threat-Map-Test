@@ -2,7 +2,7 @@ import logging
 import httpx
 import json
 from typing import Dict, Any
-from core.config import settings
+from core.config import settings, is_configured_secret
 from core.cache import cache_service
 
 logger = logging.getLogger(__name__)
@@ -25,13 +25,13 @@ class IPInfoService:
                 pass
 
         # Explicit URL with IP embedded — NEVER ipinfo.io/json without IP
-        if self.token:
+        if is_configured_secret(self.token):
             url = f"{self.base_url}/{ip}/json?token={self.token}"
         else:
             url = f"{self.base_url}/{ip}/json"
 
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
-        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+        async with httpx.AsyncClient(transport=transport, timeout=6.0) as client:
             try:
                 response = await client.get(url)
                 if response.status_code == 200:
@@ -75,19 +75,19 @@ class IPInfoService:
                 return self._get_fallback_data(ip)
 
     def _get_fallback_data(self, ip: str) -> Dict[str, Any]:
-        # Return fallback data mock for geolocation coordinates
+        # Unknown geolocation. Do not invent coordinates for failed lookups.
         return {
             "ip": ip,
-            "city": "Ashburn",
-            "region": "Virginia",
-            "country": "US",
-            "loc": "39.0438,-77.4874",
-            "lat": 39.0438,
-            "lon": -77.4874,
-            "org": "AS16509 Amazon.com, Inc.",
-            "asn": "AS16509",
-            "postal": "20147",
-            "timezone": "America/New_York",
+            "city": "Unknown",
+            "region": "Unknown",
+            "country": "Unknown",
+            "loc": "",
+            "lat": None,
+            "lon": None,
+            "org": "Unknown",
+            "asn": "Unknown",
+            "postal": "",
+            "timezone": "Unknown",
             "status": "fallback",
             "raw": None
         }

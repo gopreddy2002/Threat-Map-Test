@@ -1,7 +1,7 @@
 import logging
 import httpx
 from typing import Dict, Any
-from core.config import settings
+from core.config import settings, is_configured_secret
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,12 @@ class GreyNoiseService:
 
     async def check_ip(self, ip: str) -> Dict[str, Any]:
         url = f"{self.base_url}/{ip}"
+        if not is_configured_secret(self.api_key):
+            logger.warning("GreyNoise API key missing or placeholder. Skipping live lookup.")
+            return self._get_fallback_data(ip)
         
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
-        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+        async with httpx.AsyncClient(transport=transport, timeout=6.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:

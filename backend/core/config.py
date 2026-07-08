@@ -52,3 +52,22 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
+
+PLACEHOLDER_SECRET_VALUES = {
+    "",
+    "your_api_key",
+    "your_api_key_here",
+    "your_key",
+    "your_token",
+    "your_link",
+    "your_url",
+    "treatmap",
+}
+
+def is_configured_secret(value: Optional[str], min_length: int = 10) -> bool:
+    if not value:
+        return False
+    normalized = value.strip()
+    if len(normalized) < min_length:
+        return False
+    return normalized.lower() not in PLACEHOLDER_SECRET_VALUES

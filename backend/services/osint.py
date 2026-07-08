@@ -49,12 +49,11 @@ class OSINTService:
             }
         except Exception as e:
             logger.warning(f"WHOIS query failed for {domain}: {e}")
-            # Realistic mock fallback
             return {
-                "registrar": "NameCheap, Inc.",
-                "creation_date": "2020-03-12",
-                "expiration_date": "2027-03-12",
-                "registrant_org": "Privacy Service Provided by Withheld for Privacy ehf",
+                "registrar": "",
+                "creation_date": "",
+                "expiration_date": "",
+                "registrant_org": "",
                 "status": "fallback"
             }
 
@@ -95,12 +94,12 @@ class OSINTService:
         except Exception as e:
             logger.warning(f"SSL handshake failed for {host}:{port}: {e}")
             return {
-                "issuer": "Let's Encrypt Authority X3",
+                "issuer": "",
                 "subject": host,
-                "valid_from": "Jan  1 00:00:00 2024 GMT",
-                "valid_to": "Dec 31 23:59:59 2026 GMT",
-                "serial_number": "3F1D7A84BC09E123",
-                "version": 3,
+                "valid_from": "",
+                "valid_to": "",
+                "serial_number": "",
+                "version": None,
                 "status": "fallback"
             }
 

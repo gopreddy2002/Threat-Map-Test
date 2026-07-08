@@ -478,18 +478,15 @@ async def shodan_lookup(ip: str):
     api_key = settings.SHODAN_API_KEY
     
     if not api_key:
-        await asyncio.sleep(0.5) # Simulate API latency
         return {
             "ip": ip,
-            "os": "Linux 4.x",
-            "isp": "Amazon.com, Inc.",
-            "vulns": ["CVE-2021-44228", "CVE-2019-11043", "CVE-2023-23397"] if int(ip.split(".")[-1]) % 2 == 0 else [],
-            "banners": [
-                {"port": 22, "data": "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"},
-                {"port": 80, "data": "HTTP/1.1 200 OK\r\nServer: nginx/1.18.0"}
-            ],
-            "status": "success",
-            "mocked": True
+            "os": None,
+            "isp": None,
+            "vulns": [],
+            "banners": [],
+            "status": "unavailable",
+            "detail": "SHODAN_API_KEY is not configured.",
+            "mocked": False
         }
 
     try:
@@ -499,7 +496,8 @@ async def shodan_lookup(ip: str):
             if response.status_code == 200:
                 data = response.json()
                 
-                vulns = data.get("vulns", [])
+                raw_vulns = data.get("vulns") or {}
+                vulns = list(raw_vulns.keys()) if isinstance(raw_vulns, dict) else list(raw_vulns)
                 
                 # Extract banners (ports and their data)
                 banners = []
@@ -516,6 +514,10 @@ async def shodan_lookup(ip: str):
                     "ip": ip,
                     "os": data.get("os", "Unknown"),
                     "isp": data.get("isp", "Unknown"),
+                    "org": data.get("org", "Unknown"),
+                    "asn": data.get("asn", "Unknown"),
+                    "ports": data.get("ports", []),
+                    "hostnames": data.get("hostnames", []),
                     "vulns": vulns,
                     "banners": banners[:10], # limit to first 10
                     "status": "success",

@@ -50,13 +50,13 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
 
         # 2. Parallel Queries
         try:
-            vt_task = asyncio.wait_for(virustotal_service.get_ip_report(ip), timeout=30.0)
-            abuse_task = asyncio.wait_for(abuse_ipdb_service.check_ip(ip), timeout=30.0)
-            ipinfo_task = asyncio.wait_for(ipinfo_service.get_ip_info(ip), timeout=30.0)
-            greynoise_task = asyncio.wait_for(greynoise_service.check_ip(ip), timeout=30.0)
-            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(ip, "ip"), timeout=8.0)
-            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(ip), timeout=30.0)
-            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(ip), timeout=30.0)
+            vt_task = asyncio.wait_for(virustotal_service.get_ip_report(ip), timeout=8.0)
+            abuse_task = asyncio.wait_for(abuse_ipdb_service.check_ip(ip), timeout=8.0)
+            ipinfo_task = asyncio.wait_for(ipinfo_service.get_ip_info(ip), timeout=6.0)
+            greynoise_task = asyncio.wait_for(greynoise_service.check_ip(ip), timeout=6.0)
+            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(ip, "ip"), timeout=6.0)
+            whoisjson_task = asyncio.wait_for(whoisjson_service.get_domain_data(ip), timeout=2.0)
+            domainscan_task = asyncio.wait_for(domainscan_service.get_scan_data(ip), timeout=2.0)
 
             vt_res, abuse_res, ipinfo_res, gn_res, otx_res, whoisjson_res, domainscan_res = await asyncio.gather(
                 vt_task, abuse_task, ipinfo_task, greynoise_task, otx_task, whoisjson_task, domainscan_task,

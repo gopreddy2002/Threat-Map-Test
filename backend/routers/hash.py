@@ -41,8 +41,8 @@ async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
 
         # 2. Parallel scans (8 s per task)
         try:
-            vt_task = asyncio.wait_for(virustotal_service.get_hash_report(file_hash), timeout=30.0)
-            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(file_hash, "hash"), timeout=8.0)
+            vt_task = asyncio.wait_for(virustotal_service.get_hash_report(file_hash), timeout=8.0)
+            otx_task = asyncio.wait_for(alienvault_service.get_indicator_report(file_hash, "hash"), timeout=6.0)
 
             vt_res, otx_res = await asyncio.gather(
                 vt_task, otx_task,

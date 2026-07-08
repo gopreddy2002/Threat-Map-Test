@@ -9,7 +9,7 @@ const TOOLS = [
   { id: 'typo', name: 'Typosquatting Detector', icon: 'spellcheck', desc: 'Find active variations of a domain' },
   { id: 'decode', name: 'Base64/Hex Decoder', icon: 'code_blocks', desc: 'Decode malicious payloads' },
   { id: 'dns', name: 'Full DNS Enumerator', icon: 'dns', desc: 'Dump all DNS records for a domain' },
-  { id: 'shodan', name: 'Shodan InternetDB', icon: 'radar', desc: 'Free open ports & vulns check for an IP' },
+  { id: 'shodan', name: 'Shodan Host Lookup', icon: 'radar', desc: 'Authenticated Shodan host, ports, services, and CVE lookup' },
   { id: 'mac', name: 'MAC Vendor Lookup', icon: 'router', desc: 'Identify hardware vendor from MAC address' },
   { id: 'network', name: 'Network Range Scanner', icon: 'hub', desc: 'Analyze CIDR blocks and sample host reputation' },
   { id: 'http', name: 'HTTP Security Headers', icon: 'http', desc: 'Check HSTS, CSP, X-Frame-Options' },
@@ -224,7 +224,76 @@ export default function ToolsPage() {
       );
     }
 
-    // Generic fallback for others (Email, DNS, Shodan, Mac, Network Range)
+    if (activeTool === 'shodan') {
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Source</div>
+              <div className="text-lg font-bold text-white">{result.source || "shodan"}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Open Ports</div>
+              <div className="text-lg font-bold text-primary">{result.ports?.length || 0}</div>
+            </div>
+            <div className="bg-error-container/10 p-4 rounded-xl border border-error/20">
+              <div className="text-xs text-error uppercase tracking-wider mb-1">CVEs</div>
+              <div className="text-lg font-bold text-error">{result.vulns?.length || 0}</div>
+            </div>
+            <div className="bg-surface-container-low p-4 rounded-xl border border-white/5">
+              <div className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">ASN</div>
+              <div className="text-sm font-bold text-white truncate">{result.asn || "Unknown"}</div>
+            </div>
+          </div>
+
+          <div className="bg-[#111827] border border-white/5 rounded-xl p-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-on-surface-variant">
+              <div><span className="text-white/50">Org:</span> {result.org || result.isp || "Unknown"}</div>
+              <div><span className="text-white/50">Location:</span> {[result.city, result.country].filter(Boolean).join(", ") || "Unknown"}</div>
+              <div><span className="text-white/50">Hostnames:</span> {(result.hostnames || []).join(", ") || "None"}</div>
+              <div><span className="text-white/50">Last Update:</span> {result.last_update || "Unknown"}</div>
+            </div>
+          </div>
+
+          {result.vulns?.length > 0 && (
+            <div className="bg-error-container/10 border border-error/20 p-4 rounded-xl">
+              <h4 className="text-error font-bold text-sm mb-2">Vulnerabilities</h4>
+              <div className="flex flex-wrap gap-2">
+                {result.vulns.map((v: string) => (
+                  <span key={v} className="bg-error/20 text-error text-xs px-2 py-1 rounded font-mono">{v}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.services?.length > 0 && (
+            <div className="bg-[#111827] border border-white/5 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-white/5 border-b border-white/10 text-white font-bold text-sm">Services</div>
+              <div className="divide-y divide-white/5">
+                {result.services.map((svc: any, index: number) => (
+                  <div key={`${svc.port}-${index}`} className="p-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="text-primary font-mono font-bold">{svc.port}/{svc.transport || "tcp"}</span>
+                      {svc.product && <span className="text-white text-sm">{svc.product}</span>}
+                      {svc.version && <span className="text-on-surface-variant text-xs">{svc.version}</span>}
+                    </div>
+                    {svc.banner && <pre className="text-[11px] text-on-surface-variant whitespace-pre-wrap break-all font-mono">{svc.banner}</pre>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.shodan_error && (
+            <div className="text-xs text-on-surface-variant bg-white/5 border border-white/10 rounded-lg p-3">
+              Shodan fallback note: {result.shodan_error}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Generic fallback for others (Email, DNS, Mac, Network Range)
     return (
       <div className="bg-[#111827] border border-white/5 p-4 rounded-xl overflow-auto max-h-[600px] custom-scrollbar">
         <pre className="text-xs text-emerald-400 font-mono">

@@ -35,19 +35,34 @@ class AIService:
         """
         try:
             # Extract real signals FIRST — needed by both Gemini path and fallback
-            vt_malicious = raw_data.get("virustotal", {}).get("malicious", 0)
-            vt_total = (
-                raw_data.get("virustotal", {}).get("malicious", 0)
-                + raw_data.get("virustotal", {}).get("harmless", 0)
-                + raw_data.get("virustotal", {}).get("suspicious", 0)
-                + raw_data.get("virustotal", {}).get("undetected", 0)
+            vt_data = raw_data.get("virustotal", {}) or {}
+            vt_stats = (
+                (vt_data.get("raw") or {}).get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
+                or vt_data.get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
+                or vt_data
             )
-            abuse_score = raw_data.get("abuseipdb", {}).get("abuseConfidenceScore", 0)
-            greynoise_class = raw_data.get("greynoise", {}).get("classification", "unknown")
+            vt_status = str(vt_data.get("status", "")).lower()
+            vt_live = bool(vt_data) and vt_status not in {"fallback", "error", "unavailable"}
+            vt_malicious = int(vt_stats.get("malicious", 0) or 0)
+            vt_total = (
+                int(vt_stats.get("malicious", 0) or 0)
+                + int(vt_stats.get("harmless", 0) or 0)
+                + int(vt_stats.get("suspicious", 0) or 0)
+                + int(vt_stats.get("undetected", 0) or 0)
+            )
+            abuse_data = raw_data.get("abuseipdb", {}) or {}
+            abuse_status = str(abuse_data.get("status", "")).lower()
+            abuse_live = bool(abuse_data) and abuse_status not in {"fallback", "error", "unavailable"}
+            abuse_score = int((abuse_data.get("data") or abuse_data.get("raw") or abuse_data).get("abuseConfidenceScore", 0) or 0)
+            greynoise_data = raw_data.get("greynoise", {}) or {}
+            greynoise_status = str(greynoise_data.get("status", "")).lower()
+            greynoise_live = bool(greynoise_data) and greynoise_status not in {"fallback", "error", "unavailable"}
+            greynoise_class = greynoise_data.get("classification", "unknown")
+            live_feed_count = sum([vt_live, abuse_live, greynoise_live])
             risk_level = "LOW" if risk_score < 30 else "MEDIUM" if risk_score < 60 else "HIGH" if risk_score < 80 else "CRITICAL"
 
             if not self.model:
-                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score)
+                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score, vt_live, abuse_live, live_feed_count)
 
             SYSTEM = """You are a cybersecurity analyst assistant.
 You ONLY analyze data that is given to you.
@@ -70,13 +85,16 @@ TARGET: {indicator}
 TYPE: {ind_type}
 
 REAL API RESULTS:
-- VirusTotal malicious engines: {vt_malicious} out of {vt_total}
-- AbuseIPDB confidence score: {abuse_score} out of 100
+- VirusTotal malicious engines: {vt_malicious} out of {vt_total} (live={vt_live})
+- AbuseIPDB confidence score: {abuse_score} out of 100 (live={abuse_live})
 - GreyNoise classification: {greynoise_class}
+- Live feed count: {live_feed_count}
 - Risk score calculated: {risk_score} out of 100
 - Risk level: {risk_level}
 
 STRICT RULES:
+- If live feed count is 0:
+  category = "unverified", summary must say live feeds were unavailable
 - If vt_malicious is 0 and abuse_score < 10:
   category = "benign_asset", summary must say SAFE
 - If vt_malicious > 5 or abuse_score > 50:
@@ -106,10 +124,10 @@ Respond ONLY with this JSON, no other text:
                 response_text = response.text.strip()
             except asyncio.TimeoutError:
                 logger.error(f"Gemini timed out after 8s for indicator: {indicator}. Using fallback.")
-                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score)
+                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score, vt_live, abuse_live, live_feed_count)
             except Exception as gemini_exc:
                 logger.error(f"Gemini API call failed: {gemini_exc}. Using fallback.")
-                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score)
+                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score, vt_live, abuse_live, live_feed_count)
 
             # Clean potential markdown JSON wrapper: ```json ... ```
             if response_text.startswith("```"):
@@ -126,7 +144,7 @@ Respond ONLY with this JSON, no other text:
                 return parsed_brief
             else:
                 logger.warning("Gemini JSON missing required keys. Falling back.")
-                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score)
+                return self._get_fallback_brief(indicator, ind_type, risk_score, vt_malicious, abuse_score, vt_live, abuse_live, live_feed_count)
 
         except Exception as e:
             # Top-level safety net — this function MUST NEVER crash the caller
@@ -141,16 +159,34 @@ Respond ONLY with this JSON, no other text:
             }
 
     def _get_fallback_brief(self, indicator: str, ind_type: str, risk_score: int,
-                             vt_malicious: int = 0, abuse_score: int = 0) -> Dict[str, Any]:
+                             vt_malicious: int = 0, abuse_score: int = 0,
+                             vt_live: bool = True, abuse_live: bool = True,
+                             live_feed_count: int = 1) -> Dict[str, Any]:
         """Rule-based fallback used when Gemini is unavailable/quota exceeded.
         Uses REAL signal values — never invents threats."""
+        if live_feed_count == 0:
+            return {
+                "summary": f"{indicator} could not be verified because live reputation feeds were unavailable. No confirmed malicious evidence was returned, but this result is inconclusive until provider API access is restored.",
+                "threat_category": "Unverified",
+                "recommendations": ["Configure valid API keys for live reputation checks.", "Re-scan this indicator with refresh enabled.", "Do not treat this result as a clean bill of health."],
+                "confidence": "LOW",
+                "playbook": ["Restore provider API access.", "Run the scan again before making a blocking or allow-list decision."],
+                "mitre_tactics": []
+            }
+
         if vt_malicious == 0 and abuse_score < 10:
             # CLEAN — nothing flagged it
+            checked_sources = []
+            if vt_live:
+                checked_sources.append("VirusTotal")
+            if ind_type == "ip" and abuse_live:
+                checked_sources.append("AbuseIPDB")
+            source_text = " and ".join(checked_sources) if checked_sources else "available reputation feeds"
             return {
-                "summary": f"{indicator} was checked against VirusTotal ({vt_malicious} detections) and AbuseIPDB ({abuse_score}% confidence). No malicious indicators were found. This target appears safe.",
+                "summary": f"{indicator} was checked against {source_text}. No malicious indicators were found in the live data that responded.",
                 "threat_category": "Benign Asset",
                 "recommendations": ["No action required. Standard monitoring applies.", "Document this result for audit purposes.", "Re-scan periodically to catch future changes."],
-                "confidence": "HIGH",
+                "confidence": "HIGH" if live_feed_count >= 2 else "MEDIUM",
                 "playbook": ["No remediation steps needed.", "Continue normal operations."],
                 "mitre_tactics": []
             }

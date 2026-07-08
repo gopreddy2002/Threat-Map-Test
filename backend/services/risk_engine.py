@@ -4,6 +4,12 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 class RiskEngine:
+    def _is_live_result(self, data: Dict[str, Any]) -> bool:
+        if not data:
+            return False
+        status = str(data.get("status") or data.get("overall_status") or "").lower()
+        return status not in {"fallback", "error", "unavailable"}
+
     def calculate_risk(self, indicator_type: str, vt_data: Dict[str, Any], abuse_data: Dict[str, Any] = None, greynoise_data: Dict[str, Any] = None) -> Dict[str, Any]:
         if abuse_data is None:
             abuse_data = {}
@@ -94,14 +100,14 @@ class RiskEngine:
         # Confidence Scoring
         apis_tried = 1 # VT always tried
         apis_succeeded = 0
-        if vt_data and (vt_data.get("data") or vt_data.get("malicious") is not None):
+        if self._is_live_result(vt_data) and (vt_data.get("data") or vt_data.get("malicious") is not None):
             apis_succeeded += 1
             
         if indicator_type == "ip":
             apis_tried += 2
-            if abuse_data and (abuse_data.get("data") or abuse_data.get("abuseConfidenceScore") is not None):
+            if self._is_live_result(abuse_data) and (abuse_data.get("data") or abuse_data.get("abuseConfidenceScore") is not None):
                 apis_succeeded += 1
-            if greynoise_data and greynoise_data.get("ip") or greynoise_data.get("classification"):
+            if self._is_live_result(greynoise_data) and (greynoise_data.get("ip") or greynoise_data.get("classification")):
                 apis_succeeded += 1
                 
         confidence_ratio = apis_succeeded / apis_tried if apis_tried > 0 else 0

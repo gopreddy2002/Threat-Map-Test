@@ -2,7 +2,7 @@ import base64
 import logging
 import httpx
 from typing import Dict, Any, Optional
-from core.config import settings
+from core.config import settings, is_configured_secret
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +31,12 @@ class VirusTotalService:
         return await self._make_request(url)
 
     async def _make_request(self, url: str) -> Dict[str, Any]:
-        if not self.api_key or len(self.api_key) < 10:
-            logger.warning("VT API key missing. Returning fallback data.")
+        if not is_configured_secret(self.api_key):
+            logger.warning("VT API key missing or placeholder. Skipping live lookup.")
             return self._get_fallback_data()
 
         transport = httpx.AsyncHTTPTransport(local_address='0.0.0.0')
-        async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+        async with httpx.AsyncClient(transport=transport, timeout=8.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:

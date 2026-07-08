@@ -62,12 +62,12 @@ class URLScanService:
 
     def _get_fallback_data(self, indicator: str) -> Dict[str, Any]:
         return {
-            "scan_id": "b3e34b9d-4e9d-4d7a-b50a-e3250b73142a",
-            "screenshot_url": "https://urlscan.io/screenshots/b3e34b9d-4e9d-4d7a-b50a-e3250b73142a.png",
-            "page_title": "Apache2 Ubuntu Default Page: It works",
-            "server": "Apache/2.4.41 (Ubuntu)",
-            "ip": "192.0.2.1",
-            "asn": "DIGITALOCEAN-ASN",
+            "scan_id": "",
+            "screenshot_url": "",
+            "page_title": "",
+            "server": "",
+            "ip": "",
+            "asn": "",
             "overall_status": "fallback",
             "raw": None
         }

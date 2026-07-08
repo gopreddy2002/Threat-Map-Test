@@ -84,6 +84,12 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
     );
   }
 
+  const isLive = (value: any) => {
+    if (!value || Object.keys(value).length === 0) return false;
+    const status = String(value.status || value.lookup_status || "").toLowerCase();
+    return !["fallback", "error", "unavailable", "api_key_required"].includes(status) && value.mocked !== true;
+  };
+
   return (
     <div className="mt-8">
       <h3 className="font-bold font-label-caps text-label-caps text-[12px] text-on-surface-variant uppercase tracking-wider mb-4">
@@ -92,7 +98,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Shodan Panel */}
-        {data.shodan && (
+        {isLive(data.shodan) && (
           <DetectionCard
             title="Attack Surface (Shodan)"
             subtitle="Known vulnerabilities & exposed services on this IP"
@@ -123,7 +129,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
 
 
         {/* DNS Records Panel */}
-        {data.dns && (
+        {isLive(data.dns) && (
           <DetectionCard
             title="DNS Enumeration"
             subtitle="Core routing records for this domain"
@@ -151,7 +157,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* Tech Stack Panel */}
-        {data.techStack && (
+        {isLive(data.techStack) && (
           <DetectionCard
             title="Tech Stack Fingerprint"
             subtitle="Detected backend technologies and frameworks"
@@ -192,7 +198,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* WHOIS Panel */}
-        {data.whois && (
+        {isLive(data.whois) && (
           <DetectionCard
             title="Live WHOIS Data"
             subtitle="Who registered this domain and when"
@@ -218,7 +224,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* SSL Panel */}
-        {data.ssl && (
+        {isLive(data.ssl) && (
           <DetectionCard
             title="SSL Certificate"
             subtitle="Proves this site is who it says it is"
@@ -250,7 +256,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* Open Ports Panel */}
-        {data.ports && (
+        {isLive(data.ports) && (
           <DetectionCard
             title="Exposed Ports"
             subtitle="Open doors into this server — more = higher risk"
@@ -279,7 +285,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* Reverse DNS Panel */}
-        {data.reverseDns && (
+        {isLive(data.reverseDns) && (
           <DetectionCard
             title="Reverse DNS"
             subtitle="What name is attached to this IP address"
@@ -303,7 +309,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* ASN Panel */}
-        {data.asn && (
+        {isLive(data.asn) && (
           <DetectionCard
             title="ASN Network"
             subtitle="The company that owns this IP & its internet connection"
@@ -329,7 +335,7 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
         )}
 
         {/* Subdomains Panel */}
-        {data.subdomains && (
+        {isLive(data.subdomains) && (
           <DetectionCard
             title="Subdomain Enum"
             subtitle="Other addresses attached to this domain"

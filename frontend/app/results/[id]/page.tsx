@@ -40,6 +40,27 @@ const RelationshipGraph = dynamic(() => import("@/components/RelationshipGraph")
   ),
 });
 
+const unavailableFeedStatuses = new Set(["fallback", "error", "unavailable", "api_key_required"]);
+
+function isLiveFeedResult(feed: any) {
+  if (!feed || Object.keys(feed).length === 0) return false;
+  const status = String(feed.status || feed.overall_status || "").toLowerCase();
+  if (status) return !unavailableFeedStatuses.has(status);
+  return feed.raw != null;
+}
+
+function hasNoLiveReputationFeeds(scan: ScanResponse) {
+  const raw = scan.raw_data || {};
+  const feedNamesByType: Record<ScanResponse["type"], string[]> = {
+    ip: ["virustotal", "abuseipdb", "alienvault_otx"],
+    domain: ["virustotal", "alienvault_otx", "urlscan"],
+    hash: ["virustotal", "alienvault_otx"],
+    url: ["virustotal", "alienvault_otx", "urlscan"],
+  };
+  const feeds = feedNamesByType[scan.type].map((name) => raw[name]).filter(Boolean);
+  return feeds.length > 0 && !feeds.some(isLiveFeedResult);
+}
+
 export default function ResultsPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const [scan, setScan] = useState<ScanResponse | null>(null);
@@ -93,11 +114,17 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       try {
         setLoading(true);
         const data = await api.getScanReport(id);
-        const cacheKey = `threatmap:scan:${data.id}`;
-        const serializedData = JSON.stringify(data);
+        const reportData = hasNoLiveReputationFeeds(data)
+          ? await api.analyzeIndicator(data.indicator, data.type, true)
+          : data;
+        if (reportData.id !== data.id) {
+          addToast("Live reputation feeds restored. Report refreshed.", "success");
+        }
+        const cacheKey = `threatmap:scan:${reportData.id}`;
+        const serializedData = JSON.stringify(reportData);
         sessionStorage.setItem(cacheKey, serializedData);
         localStorage.setItem(cacheKey, serializedData);
-        await hydrateReport(data);
+        await hydrateReport(reportData);
       } catch (err: any) {
         console.error(err);
         const cached = getCachedReport();
@@ -121,7 +148,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     
     // Pre-fetch campaigns for the modal
     api.getCampaigns().then(setCampaigns).catch(console.error);
-  }, [id]);
+  }, [id, addToast]);
 
   // Separately fetch web vuln data after scan loads
   useEffect(() => {
@@ -310,11 +337,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const gnName = gn.name || gnData.name || (gnNoise ? "Observed scanner" : "Not seen");
   const gnScore = gnClassification === "malicious" ? 100 : gnNoise ? 30 : 0;
 
-  const isRealFeedResult = (feed: any) => {
-    if (!feed || Object.keys(feed).length === 0) return false;
-    const status = String(feed.status || feed.overall_status || "").toLowerCase();
-    return !["fallback", "error", "unavailable"].includes(status);
-  };
+  const isRealFeedResult = isLiveFeedResult;
   const vtLive = isRealFeedResult(vt);
   const abuseLive = isRealFeedResult(abuse);
   const gnLive = isRealFeedResult(gn);

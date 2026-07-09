@@ -31,12 +31,13 @@ const apiClient = axios.create({
 
 export const api = {
   // Analyze indicator
-  analyzeIndicator: async (indicator: string, type: "ip" | "url" | "domain" | "hash"): Promise<ScanResponse> => {
+  analyzeIndicator: async (indicator: string, type: "ip" | "url" | "domain" | "hash", refresh = false): Promise<ScanResponse> => {
     // Determine exact endpoint path based on type
     const endpoint = `/analyze/${type}`;
     const response = await apiClient.post<ScanResponse>(endpoint, {
       indicator,
       type,
+      refresh,
     });
     return response.data;
   },

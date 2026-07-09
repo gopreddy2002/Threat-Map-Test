@@ -13,6 +13,7 @@ from services.abuseipdb import abuse_ipdb_service
 from services.ipinfo import ipinfo_service
 from services.greynoise import greynoise_service
 from services.alienvault import alienvault_service
+from services.feed_status import has_no_live_reputation_feeds
 from services.risk_engine import risk_engine
 from services.ai_service import ai_service
 from services.whoisjson import whoisjson_service
@@ -30,17 +31,16 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
         if not ip:
             raise HTTPException(status_code=400, detail="IP indicator value cannot be empty.")
 
-        # 1. Check cache (skip if refresh=True or if cached data has stale fallback ipinfo)
+        # 1. Check cache (skip if refresh=True or if cached data has stale fallback feeds)
         cache_key = f"scan:ip:{ip}"
         if not payload.refresh:
             cached_data = cache_service.get(cache_key)
             if cached_data:
                 try:
                     parsed = json.loads(cached_data)
-                    # Invalidate cache if ipinfo is fallback (Ashburn/Virginia placeholder)
-                    ipinfo_in_cache = parsed.get("raw_data", {}).get("ipinfo", {})
-                    if ipinfo_in_cache.get("status") == "fallback":
-                        logger.info(f"Stale fallback ipinfo in cache for {ip}, forcing fresh scan.")
+                    raw_data = parsed.get("raw_data", {})
+                    if has_no_live_reputation_feeds(raw_data, ["virustotal", "abuseipdb", "alienvault_otx"]):
+                        logger.info(f"Stale fallback reputation cache for IP {ip}; forcing fresh scan.")
                         cache_service.delete(cache_key)
                     else:
                         logger.info(f"Cache hit for IP: {ip}")

@@ -10,6 +10,7 @@ from models.database import get_db, Scan
 from models.schemas import ScanResponse, ScanCreate
 from services.virustotal import virustotal_service
 from services.alienvault import alienvault_service
+from services.feed_status import has_no_live_reputation_feeds
 from services.risk_engine import risk_engine
 from services.ai_service import ai_service
 
@@ -34,8 +35,13 @@ async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
             cached_data = cache_service.get(cache_key)
             if cached_data:
                 try:
-                    logger.info(f"Cache hit for hash: {file_hash}")
-                    return ScanResponse(**json.loads(cached_data))
+                    parsed = json.loads(cached_data)
+                    if has_no_live_reputation_feeds(parsed.get("raw_data", {}), ["virustotal", "alienvault_otx"]):
+                        logger.info(f"Stale fallback reputation cache for hash {file_hash}; forcing fresh scan.")
+                        cache_service.delete(cache_key)
+                    else:
+                        logger.info(f"Cache hit for hash: {file_hash}")
+                        return ScanResponse(**parsed)
                 except Exception:
                     pass
 

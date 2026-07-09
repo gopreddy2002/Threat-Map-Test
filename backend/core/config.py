@@ -10,6 +10,8 @@ DEFAULT_DATABASE_URL = (
     else "sqlite:///./threatmap.db"
 )
 
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ThreatMap API"
     VERSION: str = "1.0.0"
@@ -43,7 +45,8 @@ class Settings(BaseSettings):
     # Optional Keys
     GROQ_API_KEY: Optional[str] = None
     OTX_API_KEY: Optional[str] = None
-    SHODAN_API_KEY: Optional[str] = "L7MfQIpj0L7jEXQrwOe0WnJPgDbQKfdE"
+    SHODAN_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
     SPIDERFOOT_BASE_URL: Optional[str] = "http://127.0.0.1:5001"
     SPIDERFOOT_API_KEY: Optional[str] = None
     SPIDERFOOT_USERNAME: Optional[str] = None
@@ -51,7 +54,7 @@ class Settings(BaseSettings):
     ABUSECH_AUTH_KEY: Optional[str] = None
     
     class Config:
-        env_file = ".env"
+        env_file = os.path.join(BACKEND_DIR, ".env")
         env_file_encoding = "utf-8"
         case_sensitive = True
         extra = "ignore"

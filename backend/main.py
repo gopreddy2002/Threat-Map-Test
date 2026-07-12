@@ -11,7 +11,7 @@ if BACKEND_DIR not in sys.path:
 print("Python version:", sys.version)
 print("Starting main.py...")
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from core.security import PUBLIC_PATHS, authenticate_request
@@ -19,6 +19,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
+from mangum import Mangum
 
 try:
     from core.config import settings, is_configured_secret
@@ -162,7 +163,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"UNHANDLED EXCEPTION on {request.method} {request.url}:\n{error_msg}")
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc), "detail": "Internal server error - check backend logs."}
+        content={"detail": "Internal server error."}
     )
 
 import asyncio
@@ -258,7 +259,6 @@ if chat:
 if tools:
     app.include_router(tools.router, prefix=settings.API_V1_STR)
 if alert_router:
-    app.include_router(alert_router)
     app.include_router(alert_router, prefix=settings.API_V1_STR)
 
 try:
@@ -299,13 +299,6 @@ if bulk_upload:
 from models.schemas import ScanResponse
 from services.threat_intel import find_linked_actors
 from services.correlation import get_correlated_iocs
-from fastapi import HTTPException
-
-@app.get(f"{settings.API_V1_STR}/health", tags=["System"])
-def health_check():
-    return {"status": "ok", "service": "ThreatMap API"}
-
-
 @app.get(f"{settings.API_V1_STR}/analyze/scan/{{scan_id}}", tags=["Scans"])
 def get_scan_report(scan_id: str, db: Session = Depends(get_db)):
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
@@ -391,9 +384,6 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         
         total_all_scans = sum(risk_counts.values())
         
-        if scans_count == 0 and total_all_scans > 0:
-            scans_count = total_all_scans
-
         # 4. Monitored IOCs (Watchlist size)
         watchlist_count = db.query(Watchlist).count()
 
@@ -578,22 +568,6 @@ def get_attack_prediction(db: Session = Depends(get_db)):
         estimated_time=estimated_time,
         explanation=explanation,
     )
-
-
-@app.get(f"{settings.API_V1_STR}/dashboard/telemetry", tags=["Telemetry"])
-def get_dashboard_telemetry(db: Session = Depends(get_db)):
-    total_scans = db.query(Scan).count()
-    high_risk_count = db.query(Scan).filter(Scan.risk_score >= 70).count()
-    
-    return {
-        "total_scans": total_scans if total_scans > 0 else 1284,
-        "high_risk_count": high_risk_count if high_risk_count > 0 else 50,
-        "active_apis": 5,
-        "avg_scan_time": "1.2s"
-    }
-
-# Vercel requires this for serverless functions
-from mangum import Mangum
 handler = Mangum(app)
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.cache import cache_service
+from core.http_safety import fetch_limited_text
+from core.indicator_validation import validate_public_url
 from models.database import get_db, Scan
 from models.schemas import ScanResponse, ScanCreate
 from services.virustotal import virustotal_service
@@ -23,10 +25,7 @@ router = APIRouter(prefix="/analyze", tags=["URL Analysis"])
 @router.post("/url", response_model=ScanResponse)
 async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
     try:
-        target_url = payload.indicator.strip()
-
-        if not target_url:
-            raise HTTPException(status_code=400, detail="URL target value cannot be empty.")
+        target_url = validate_public_url(payload.indicator)
 
         # 1. Check cache
         cache_key = f"scan:url:{target_url}"
@@ -93,10 +92,10 @@ async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
         phishing_kit_matches = []
         try:
             import httpx
-            async with httpx.AsyncClient(verify=False) as client:
-                resp = await client.get(target_url, timeout=5.0, follow_redirects=True)
-                body = resp.text.lower()
-                headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
+            async with httpx.AsyncClient(verify=True, timeout=5.0) as client:
+                text, response_headers = await fetch_limited_text(client, target_url)
+                body = text.lower()
+                headers = {k.lower(): v.lower() for k, v in response_headers.items()}
                 
                 if "x-mailer" in headers and "phish" in headers["x-mailer"]:
                     phishing_kit_matches.append("Generic Phishing Mailer")
@@ -170,4 +169,4 @@ async def analyze_url(payload: ScanCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error("[url] Scan crashed — FULL TRACEBACK:", exc_info=True)
-        return {"error": str(e), "risk_score": 0, "risk_level": "UNKNOWN"}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Scan failed.")

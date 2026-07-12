@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.cache import cache_service
+from core.indicator_validation import validate_domain
 from models.database import get_db, Scan
 from models.schemas import ScanResponse, ScanCreate
 from services.virustotal import virustotal_service
@@ -23,9 +24,7 @@ router = APIRouter(prefix="/analyze", tags=["Domain Analysis"])
 @router.post("/domain", response_model=ScanResponse)
 async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
     try:
-        domain = payload.indicator.strip()
-        if not domain:
-            raise HTTPException(status_code=400, detail="Domain indicator cannot be empty.")
+        domain = validate_domain(payload.indicator)
 
         # 1. Cache lookup
         cache_key = f"scan:domain:{domain}"
@@ -184,4 +183,4 @@ async def analyze_domain(payload: ScanCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error("[domain] Scan crashed — FULL TRACEBACK:", exc_info=True)
-        return {"error": str(e), "risk_score": 0, "risk_level": "UNKNOWN"}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Scan failed.")

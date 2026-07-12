@@ -42,18 +42,7 @@ export const GlobalMap: React.FC<GlobalMapProps> = ({ points }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
 
-  const fallbackPoints: GlobalMapPoint[] = [
-    { lat: 39.0438, lon: -77.4874, label: "Botnet C2 — Ashburn, US",         level: "CRITICAL", indicator: "192.168.0.1",  risk_score: 95, country: "United States", scanned_at: new Date().toISOString() },
-    { lat: 55.7558, lon: 37.6173,  label: "Ransomware Core — Moscow, RU",    level: "CRITICAL", indicator: "45.33.32.156", risk_score: 91, country: "Russia",         scanned_at: new Date().toISOString() },
-    { lat: 31.2304, lon: 121.4737, label: "APT Brute-Force — Shanghai, CN",  level: "HIGH",     indicator: "103.21.244.0", risk_score: 76, country: "China",          scanned_at: new Date().toISOString() },
-    { lat: 52.3676, lon: 4.9041,   label: "Spam Relay — Amsterdam, NL",      level: "MEDIUM",   indicator: "185.220.101.x",risk_score: 48, country: "Netherlands",    scanned_at: new Date().toISOString() },
-    { lat: -33.8688,lon: 151.2093, label: "Phishing Redirect — Sydney, AU",  level: "HIGH",     indicator: "1.1.1.1",      risk_score: 72, country: "Australia",      scanned_at: new Date().toISOString() },
-    { lat: 1.3521,  lon: 103.8198, label: "DDoS Amplifier — Singapore",      level: "MEDIUM",   indicator: "8.8.8.8",      risk_score: 41, country: "Singapore",      scanned_at: new Date().toISOString() },
-    { lat: 48.8566, lon: 2.3522,   label: "Credential Stealer — Paris, FR",  level: "HIGH",     indicator: "91.108.4.1",   risk_score: 79, country: "France",         scanned_at: new Date().toISOString() },
-    { lat: 19.4326, lon: -99.1332, label: "Cryptominer — Mexico City, MX",   level: "LOW",      indicator: "200.23.45.1",  risk_score: 12, country: "Mexico",         scanned_at: new Date().toISOString() },
-  ];
-
-  const activePoints = points.length > 0 ? points : fallbackPoints;
+  const activePoints = points;
   const dangerCount  = activePoints.filter(p => p.level === "HIGH" || p.level === "CRITICAL").length;
 
   useEffect(() => {

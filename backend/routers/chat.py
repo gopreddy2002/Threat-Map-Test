@@ -20,7 +20,7 @@ async def ai_chat_endpoint(req: ChatRequest):
         response_text = await chat_with_ai(req.message, req.history, req.model)
         return ChatResponse(response=response_text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="AI chat request failed.")
 
 @router.post("/chat/image", response_model=ChatResponse)
 async def ai_chat_image_endpoint(message: str = Form(...), file: UploadFile = File(...)):

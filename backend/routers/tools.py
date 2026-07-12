@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 import httpx
 from core.config import is_configured_secret, settings
+from core.http_safety import fetch_limited_text
+from core.indicator_validation import validate_public_url
 
 try:
     import dns.asyncresolver
@@ -292,7 +294,7 @@ async def _fetch_cisa_kev(cve: str) -> dict:
         match = next((item for item in vulns if str(item.get("cveID", "")).upper() == cve.upper()), None)
         return {**source, "status": "success", "matched": bool(match), "data": match}
     except Exception as e:
-        return {**source, "status": "unavailable", "detail": str(e)}
+        return {**source, "status": "unavailable", "detail": "CISA KEV lookup failed."}
 
 async def _fetch_epss(cve: str) -> dict:
     source = {"id": "epss", "name": "FIRST EPSS", "url": "https://api.first.org/data/v1/epss"}
@@ -305,7 +307,7 @@ async def _fetch_epss(cve: str) -> dict:
         rows = data.get("data", []) if isinstance(data, dict) else []
         return {**source, "status": "success", "matched": bool(rows), "data": rows[0] if rows else None}
     except Exception as e:
-        return {**source, "status": "unavailable", "detail": str(e)}
+        return {**source, "status": "unavailable", "detail": "EPSS lookup failed."}
 
 def _soc_severity(observables: dict, feed_results: list[dict], vuln_results: list[dict], severity_hint: Optional[str]) -> str:
     if severity_hint:
@@ -424,7 +426,7 @@ async def _fetch_text_feed(source: dict, indicator: str) -> dict:
             "matches": [indicator] if matched else [],
         }
     except Exception as e:
-        return {**source, "status": "unavailable", "detail": str(e)}
+        return {**source, "status": "unavailable", "detail": "Feed lookup failed."}
 
 async def _abusech_post(source: dict, url: str, payload: dict, auth_key: Optional[str]) -> dict:
     if not auth_key:
@@ -448,7 +450,7 @@ async def _abusech_post(source: dict, url: str, payload: dict, auth_key: Optiona
             "data": data,
         }
     except Exception as e:
-        return {**source, "status": "unavailable", "detail": str(e)}
+        return {**source, "status": "unavailable", "detail": "abuse.ch lookup failed."}
 
 async def _threatfox_post(source: dict, payload: dict, auth_key: Optional[str]) -> dict:
     if not auth_key:
@@ -476,7 +478,7 @@ async def _threatfox_post(source: dict, payload: dict, auth_key: Optional[str]) 
             "data": data,
         }
     except Exception as e:
-        return {**source, "status": "unavailable", "detail": str(e)}
+        return {**source, "status": "unavailable", "detail": "ThreatFox lookup failed."}
 
 @router.post("/email-headers")
 async def analyze_email_headers(request: EmailHeadersRequest):
@@ -591,8 +593,8 @@ async def analyze_email_headers(request: EmailHeadersRequest):
             },
             "headers": headers_dict
         }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Email header analysis failed.")
 
 @router.get("/typosquatting")
 async def check_typosquatting(domain: str = Query(..., description="Domain to check")):
@@ -1220,7 +1222,7 @@ async def shodan_host_lookup(ip: str = Query(..., description="IP to scan via Sh
             else:
                 return {"source": "internetdb", "ip": ip, "status": "error", "error": f"InternetDB returned {resp.status_code}", "shodan_error": shodan_error}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="MAC vendor lookup failed.")
 
 @router.get("/mac")
 async def mac_lookup(mac: str = Query(..., description="MAC Address")):
@@ -1236,7 +1238,7 @@ async def mac_lookup(mac: str = Query(..., description="MAC Address")):
             else:
                 return {"error": f"MAC API returned {resp.status_code}"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Network range analysis failed.")
 
 @router.get("/network-range")
 async def network_range(cidr: str = Query(..., description="CIDR block e.g. 192.168.1.0/24")):
@@ -1277,18 +1279,19 @@ async def network_range(cidr: str = Query(..., description="CIDR block e.g. 192.
             "sample_shodan_checks": sample_results
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="HTTP header analysis failed.")
 
 @router.get("/http-headers")
 async def analyze_http_headers(url: str = Query(..., description="URL to analyze")):
     if not url.startswith("http"):
         url = "https://" + url
+    url = validate_public_url(url)
         
     try:
-        async with httpx.AsyncClient(verify=False) as client:
-            resp = await client.get(url, timeout=10.0, follow_redirects=True)
+        async with httpx.AsyncClient(verify=True, timeout=10.0) as client:
+            _, response_headers = await fetch_limited_text(client, url)
             
-            headers = dict(resp.headers)
+            headers = dict(response_headers)
             security_headers = {
                 "Strict-Transport-Security": headers.get("strict-transport-security"),
                 "Content-Security-Policy": headers.get("content-security-policy"),
@@ -1318,5 +1321,5 @@ async def analyze_http_headers(url: str = Query(..., description="URL to analyze
                 "security_headers": security_headers,
                 "all_headers": headers
             }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="HTTP header analysis failed.")

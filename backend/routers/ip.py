@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.config import settings
 from core.cache import cache_service
+from core.indicator_validation import validate_public_ip
 from models.database import get_db, Scan
 from models.schemas import ScanResponse, ScanCreate
 from services.virustotal import virustotal_service
@@ -25,11 +26,7 @@ router = APIRouter(prefix="/analyze", tags=["IP Analysis"])
 @router.post("/ip", response_model=ScanResponse)
 async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
     try:
-        ip = payload.indicator.strip()
-
-        # Simple validation for IP structure
-        if not ip:
-            raise HTTPException(status_code=400, detail="IP indicator value cannot be empty.")
+        ip = validate_public_ip(payload.indicator)
 
         # 1. Check cache (skip if refresh=True or if cached data has stale fallback feeds)
         cache_key = f"scan:ip:{ip}"
@@ -78,7 +75,7 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
             logger.error(f"[ip] Parallel lookups failed: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed gathering threat vectors: {str(e)}"
+                detail="Failed gathering threat vectors."
             )
 
         # 3. Calculate Risk
@@ -162,5 +159,5 @@ async def analyze_ip(payload: ScanCreate, db: Session = Depends(get_db)):
         logger.error(f"[ip] Scan crashed — FULL TRACEBACK:", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Scan failed: {str(e)}"
+            detail="Scan failed."
         )

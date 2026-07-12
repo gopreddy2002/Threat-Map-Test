@@ -96,14 +96,7 @@ export default function Home() {
         // Redirect to a specific CVE results view
         router.push(`/results/cve/${indicator}`);
       } else {
-        // Run API call + 6s minimum UX delay in parallel.
-        // If API responds in 2s, we wait the remaining 4s (professional feel).
-        // If API takes 10s, we just wait for it (delay already passed).
-        const minDelay = new Promise<void>(r => setTimeout(r, 6000));
-        const [result] = await Promise.all([
-          api.analyzeIndicator(indicator, type),
-          minDelay,
-        ]);
+        const result = await api.analyzeIndicator(indicator, type);
 
         if (result && result.id) {
           const cacheKey = `threatmap:scan:${result.id}`;

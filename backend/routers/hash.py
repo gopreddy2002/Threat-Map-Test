@@ -2,10 +2,10 @@ import uuid
 import json
 import asyncio
 import logging
-import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.cache import cache_service
+from core.indicator_validation import validate_file_hash
 from models.database import get_db, Scan
 from models.schemas import ScanResponse, ScanCreate
 from services.virustotal import virustotal_service
@@ -20,14 +20,7 @@ router = APIRouter(prefix="/analyze", tags=["File Hash Analysis"])
 @router.post("/hash", response_model=ScanResponse)
 async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
     try:
-        file_hash = payload.indicator.strip().lower()
-
-        # MD5, SHA-1, SHA-256 validation pattern
-        if not re.match(r"^[a-f0-9]{32}$|^[a-f0-9]{40}$|^[a-f0-9]{64}$", file_hash):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid file hash format. Must be MD5, SHA-1 or SHA-256 hex string."
-            )
+        file_hash = validate_file_hash(payload.indicator)
 
         # 1. Cache Check
         cache_key = f"scan:hash:{file_hash}"
@@ -138,4 +131,4 @@ async def analyze_hash(payload: ScanCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error("[hash] Scan crashed — FULL TRACEBACK:", exc_info=True)
-        return {"error": str(e), "risk_score": 0, "risk_level": "UNKNOWN"}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Scan failed.")

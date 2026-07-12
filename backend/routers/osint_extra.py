@@ -14,6 +14,8 @@ import httpx
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from core.http_safety import fetch_limited_text
+from core.indicator_validation import validate_domain, validate_file_hash, validate_public_ip, validate_public_url
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/osint", tags=["OSINT Extra"])
@@ -104,10 +106,10 @@ async def reverse_dns_lookup(ip: str):
         )
         return {"ip": ip, "hostname": hostname[0], "aliases": list(hostname[1]), "status": "success"}
     except (socket.herror, socket.gaierror) as e:
-        return {"ip": ip, "hostname": None, "status": "no_record", "detail": str(e)}
+        return {"ip": ip, "hostname": None, "status": "no_record", "detail": "Reverse DNS record not found."}
     except Exception as e:
         logger.error(f"Reverse DNS failed for {ip}: {e}")
-        return {"ip": ip, "hostname": None, "status": "error", "detail": str(e)}
+        return {"ip": ip, "hostname": None, "status": "error", "detail": "Reverse DNS lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -143,7 +145,7 @@ async def whois_lookup(indicator: str):
         }
     except Exception as e:
         logger.error(f"WHOIS lookup failed for {indicator}: {e}")
-        return {"indicator": indicator, "lookup_status": "error", "detail": str(e)}
+        return {"indicator": indicator, "lookup_status": "error", "detail": "WHOIS lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -201,9 +203,9 @@ async def ssl_inspector(domain: str):
                 "status": "success"
             }
         except ssl.SSLCertVerificationError as e:
-            return {"domain": domain, "status": "ssl_error", "detail": str(e), "is_expired": True}
+            return {"domain": domain, "status": "ssl_error", "detail": "TLS certificate validation failed.", "is_expired": True}
         except Exception as e:
-            return {"domain": domain, "status": "error", "detail": str(e)}
+            return {"domain": domain, "status": "error", "detail": "SSL inspection failed."}
 
     result = await asyncio.get_event_loop().run_in_executor(None, _check_ssl, domain)
     return result
@@ -252,7 +254,7 @@ async def scan_open_ports(ip: str):
         }
     except Exception as e:
         logger.error(f"Port scan failed for {ip}: {e}")
-        return {"ip": ip, "open_ports": [], "status": "error", "detail": str(e)}
+        return {"ip": ip, "open_ports": [], "status": "error", "detail": "Port scan failed."}
 
 
 # ─────────────────────────────────────────
@@ -286,7 +288,7 @@ async def enumerate_subdomains(domain: str):
             }
     except Exception as e:
         logger.error(f"Subdomain enum failed for {domain}: {e}")
-        return {"domain": domain, "subdomains": [], "status": "error", "detail": str(e)}
+        return {"domain": domain, "subdomains": [], "status": "error", "detail": "Subdomain lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -317,7 +319,7 @@ async def get_asn_info(ip: str):
             return {"ip": ip, "status": "unavailable"}
     except Exception as e:
         logger.error(f"ASN lookup failed for {ip}: {e}")
-        return {"ip": ip, "status": "error", "detail": str(e)}
+        return {"ip": ip, "status": "error", "detail": "ASN lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -371,7 +373,7 @@ async def email_breach_check(email: str):
                 return {"email": email, "status": "unavailable", "found": None}
     except Exception as e:
         logger.error(f"Email breach check failed for {email}: {e}")
-        return {"email": email, "status": "error", "detail": str(e)}
+        return {"email": email, "status": "error", "detail": "Breach lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -439,7 +441,7 @@ async def cve_lookup(cve_id: str):
             }
     except Exception as e:
         logger.error(f"CVE lookup failed for {cve_id}: {e}")
-        return {"cve_id": cve_id, "status": "error", "detail": str(e)}
+        return {"cve_id": cve_id, "status": "error", "detail": "CVE lookup failed."}
 
 
 # ─────────────────────────────────────────
@@ -463,14 +465,28 @@ async def bulk_scan(payload: BulkScanRequest):
         indicator = indicator.strip()
         if not indicator:
             return {}
-        # Detect type
         ind_type = "ip"
-        if indicator.startswith("http://") or indicator.startswith("https://"):
-            ind_type = "url"
-        elif "." in indicator and not indicator[0].isdigit():
-            ind_type = "domain"
-        elif len(indicator) in (32, 40, 64):
-            ind_type = "hash"
+        try:
+            if indicator.startswith("http://") or indicator.startswith("https://"):
+                indicator = validate_public_url(indicator)
+                ind_type = "url"
+            elif len(indicator) in (32, 40, 64):
+                indicator = validate_file_hash(indicator)
+                ind_type = "hash"
+            elif "." in indicator and not indicator[0].isdigit():
+                indicator = validate_domain(indicator)
+                ind_type = "domain"
+            else:
+                indicator = validate_public_ip(indicator)
+        except HTTPException as exc:
+            return {
+                "indicator": indicator,
+                "type": "unknown",
+                "risk_score": 0,
+                "risk_level": "UNKNOWN",
+                "status": "error",
+                "detail": exc.detail,
+            }
 
         try:
             if ind_type == "ip":
@@ -499,7 +515,7 @@ async def bulk_scan(payload: BulkScanRequest):
                 "risk_score": 0,
                 "risk_level": "UNKNOWN",
                 "status": "error",
-                "detail": str(e)
+                "detail": "Lookup failed."
             }
 
     tasks = [_check_one(ind) for ind in indicators]
@@ -540,7 +556,7 @@ async def enumerate_dns_records(domain: str):
         }
     except Exception as e:
         logger.error(f"DNS lookup failed for {domain}: {e}")
-        return {"domain": domain, "records": {}, "status": "error", "detail": str(e)}
+        return {"domain": domain, "records": {}, "status": "error", "detail": "DNS lookup failed."}
 
 # ─────────────────────────────────────────
 # 11. SHODAN INTEGRATION
@@ -603,7 +619,7 @@ async def shodan_lookup(ip: str):
                 return {"ip": ip, "status": "error", "detail": f"Shodan API error: {response.status_code}"}
     except Exception as e:
         logger.error(f"Shodan API failed for {ip}: {e}")
-        return {"ip": ip, "status": "error", "detail": str(e)}
+        return {"ip": ip, "status": "error", "detail": "Shodan lookup failed."}
 
 
 
@@ -685,11 +701,13 @@ async def active_web_scanner(domain: str):
     }
 
     try:
-        url = f"https://{domain}" if not domain.startswith("http") else domain
-        http_url = f"http://{domain}"
+        url = validate_public_url(domain if domain.startswith("http") else f"https://{domain}")
+        host = httpx.URL(url).host or domain
+        validate_domain(host)
+        http_url = validate_public_url(f"http://{host}")
         
         # Primary HTTPS fetch
-        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=True, timeout=8.0, follow_redirects=True) as client:
             response = await client.get(url)
             headers_found = {k.lower(): v for k, v in response.headers.items()}
             cookies_found = list(response.cookies.jar)
@@ -794,7 +812,7 @@ async def active_web_scanner(domain: str):
 
     except Exception as e:
         logger.error(f"Web vuln scan failed for {domain}: {e}")
-        return {"domain": domain, "vulnerabilities": [], "security_score": None, "status": "error", "detail": str(e)}
+        return {"domain": domain, "vulnerabilities": [], "security_score": None, "status": "error", "detail": "Web vulnerability scan failed."}
 
 # ─────────────────────────────────────────
 # 14. TECH STACK FINGERPRINTING
@@ -815,11 +833,12 @@ async def tech_stack_fingerprint(domain: str):
     }
     
     try:
-        url = f"https://{domain}" if not domain.startswith("http") else domain
-        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True) as client:
-            response = await client.get(url)
+        url = validate_public_url(domain if domain.startswith("http") else f"https://{domain}")
+        async with httpx.AsyncClient(verify=True, timeout=8.0) as client:
+            html_text, response_headers = await fetch_limited_text(client, url)
+            response = type("ResponseView", (), {"headers": response_headers})()
             headers = {k.lower(): v for k, v in response.headers.items()}
-            html = response.text.lower()
+            html = html_text.lower()
             
             # Server
             server = headers.get("server", "").lower()
@@ -864,4 +883,4 @@ async def tech_stack_fingerprint(domain: str):
             
     except Exception as e:
         logger.error(f"Tech stack scan failed for {domain}: {e}")
-        return {"domain": domain, "stack": stack, "status": "error", "detail": str(e)}
+        return {"domain": domain, "stack": stack, "status": "error", "detail": "Tech stack scan failed."}

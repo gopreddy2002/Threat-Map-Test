@@ -8,6 +8,29 @@ interface ScanInputProps {
 
 export type ScanType = "ip" | "url" | "domain" | "hash" | "bulk" | "cve";
 
+const isBlockedIPv4 = (value: string) => {
+  const parts = value.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) return true;
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    a === 0 ||
+    a >= 224 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+};
+
+const isValidPublicDomain = (value: string) => {
+  const domain = value.trim().replace(/\.$/, "").toLowerCase();
+  if (domain === "localhost" || domain.endsWith(".localhost")) return false;
+  if (domain.includes("/") || domain.includes(":") || domain.includes("@")) return false;
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(domain);
+};
+
 export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false }) => {
   const [activeTab, setActiveTab] = useState<ScanType>("ip");
   const [inputValue, setInputValue] = useState("");
@@ -74,7 +97,9 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
       icon: <span className="material-symbols-outlined text-[18px]">sensors</span>,
       validate: (val: string) => {
         const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-        return ipRegex.test(val.trim()) ? "" : "Invalid IPv4 address format.";
+        const ip = val.trim();
+        if (!ipRegex.test(ip)) return "Invalid IPv4 address format.";
+        return isBlockedIPv4(ip) ? "Private, localhost, or reserved IP addresses are not allowed." : "";
       },
     },
     domain: {
@@ -82,8 +107,7 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
       placeholder: "Enter domain (e.g., malicious-dns.io)...",
       icon: <span className="material-symbols-outlined text-[18px]">language</span>,
       validate: (val: string) => {
-        const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
-        return domainRegex.test(val.trim()) ? "" : "Invalid domain format.";
+        return isValidPublicDomain(val) ? "" : "Invalid or internal domain.";
       },
     },
     url: {
@@ -96,6 +120,11 @@ export const ScanInput: React.FC<ScanInputProps> = ({ onScan, isLoading = false 
           const parsed = new URL(val.trim());
           if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
              return "Invalid URL protocol. Must be http:// or https://.";
+          }
+          if (parsed.username || parsed.password) return "URLs with embedded credentials are not allowed.";
+          if (parsed.hostname === "localhost" || parsed.hostname.endsWith(".localhost")) return "Localhost URLs are not allowed.";
+          if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(parsed.hostname) && isBlockedIPv4(parsed.hostname)) {
+            return "Private, localhost, or reserved IP URLs are not allowed.";
           }
           return "";
         } catch {

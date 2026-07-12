@@ -60,8 +60,6 @@ class OSINTService:
 
     async def get_ssl_metadata(self, host: str, port: int = 443) -> Dict[str, Any]:
         context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
         
         try:
             # Set socket timeout to prevent long hangs

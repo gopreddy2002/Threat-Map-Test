@@ -66,10 +66,10 @@ def download_template():
         "Threat_Type", "Severity", "Source", "Country", "Description"
     ]
     examples = [
-        ["192.168.1.100", "", "", "", "Botnet C2", "High", "Internal Threat Intel", "US", "Active C2 beaconing detected"],
-        ["", "badsite.com", "", "", "Phishing", "Medium", "PhishTank", "CN", "Reported credential harvesting domain"],
-        ["", "", "http://malicious.ru/payload.exe", "", "Malware Distribution", "Critical", "AlienVault", "RU", "Active host of ransomware binaries"],
-        ["", "", "", "44d88612fea8a8f36de82e1278abb02f", "Ransomware", "High", "VirusTotal", "DE", "LockBit ransomware variant hash"]
+        ["8.8.8.8", "", "", "", "Reference", "Low", "Example", "US", "Public resolver example"],
+        ["", "example.com", "", "", "Reference", "Low", "Example", "US", "Documentation domain example"],
+        ["", "", "https://example.com/login", "", "Reference", "Low", "Example", "US", "HTTPS URL example"],
+        ["", "", "", "44d88612fea8a8f36de82e1278abb02f", "Reference", "Medium", "Example", "", "Well-known test hash example"]
     ]
     
     output = StringIO()

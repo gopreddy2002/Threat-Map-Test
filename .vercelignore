@@ -6,6 +6,7 @@
 __pycache__
 backend/venv
 backend/__pycache__
+backend/.venv
 frontend/.next
 frontend/node_modules
 node_modules
@@ -16,3 +17,16 @@ scratch
 .env
 .env.*
 backend/.env
+backend/uploads
+spiderfoot/
+docker-compose.spiderfoot.yml
+Dockerfile
+start.bat
+start.ps1
+start.sh
+test_redis.py
+fix_imports.py
+google_dorking.py
+yara_rule_generator.py
+*.md
+

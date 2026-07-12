@@ -370,11 +370,19 @@ export const api = {
     });
     return response.data;
   },
-  toolsSpiderFoot: async (target: string, targetType: string = "domain", useCase: string = "passive") => {
+  toolsSpiderFoot: async (
+    target: string,
+    targetType: string = "domain",
+    useCase: string = "passive",
+    options: { scanName?: string; moduleList?: string; typeList?: string } = {},
+  ) => {
     const response = await apiClient.post(`/tools/spiderfoot`, {
       target,
       target_type: targetType,
       use_case: useCase,
+      scan_name: options.scanName || null,
+      module_list: options.moduleList || null,
+      type_list: options.typeList || null,
     });
     return response.data;
   },
@@ -406,16 +414,16 @@ export const api = {
     const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/logs`, { params: { limit } });
     return response.data;
   },
-  spiderFootScanSummary: async (scanId: string) => {
-    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/summary`);
+  spiderFootScanSummary: async (scanId: string, by: "type" | "module" = "type") => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/summary`, { params: { by } });
     return response.data;
   },
   spiderFootScanResults: async (scanId: string, eventType: string = "ALL", unique: boolean = false) => {
     const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/results`, { params: { event_type: eventType, unique } });
     return response.data;
   },
-  spiderFootScanCorrelations: async (scanId: string) => {
-    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/correlations`);
+  spiderFootScanCorrelations: async (scanId: string, correlationId?: string) => {
+    const response = await apiClient.get(`/tools/spiderfoot/scans/${encodeURIComponent(scanId)}/correlations`, { params: { correlation_id: correlationId || undefined } });
     return response.data;
   },
   spiderFootScanExport: async (scanId: string, exportFormat: string = "json") => {
@@ -495,6 +503,10 @@ export const api = {
 
   getAttackPrediction: async (): Promise<AttackPrediction> => {
     const response = await apiClient.get<AttackPrediction>("/dashboard/prediction/");
+    return response.data;
+  },
+  spiderFootSaveConfig: async (token: string, allopts: Record<string, unknown>) => {
+    const response = await apiClient.post(`/tools/spiderfoot/config`, { token, allopts });
     return response.data;
   },
 

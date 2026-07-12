@@ -940,7 +940,10 @@ async def start_spiderfoot_scan(req: SpiderFootRequest):
     if not target:
         raise HTTPException(status_code=400, detail="Target cannot be empty")
 
-    allowed_types = {"domain", "ip", "email", "username", "phone", "netblock", "hostname"}
+    allowed_types = {
+        "domain", "ip", "email", "username", "phone", "netblock", "hostname",
+        "asn", "humanname", "bitcoin",
+    }
     if target_type not in allowed_types:
         raise HTTPException(status_code=400, detail=f"Target type must be one of: {', '.join(sorted(allowed_types))}")
 
@@ -1044,7 +1047,7 @@ async def spiderfoot_scan_logs(scan_id: str, limit: int = Query(100, ge=1, le=10
     return await _spiderfoot_request("/scanlog", method="POST", data={"id": scan_id, "limit": str(limit)})
 
 @router.get("/spiderfoot/scans/{scan_id}/summary")
-async def spiderfoot_scan_summary(scan_id: str, by: str = Query("type")):
+async def spiderfoot_scan_summary(scan_id: str, by: str = Query("type", pattern="^(type|module)$")):
     return await _spiderfoot_request("/scansummary", params={"id": scan_id, "by": by})
 
 @router.get("/spiderfoot/scans/{scan_id}/results")

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 
@@ -33,11 +33,27 @@ export default function ToolsPage() {
   const [spiderFootUseCase, setSpiderFootUseCase] = useState("passive");
   const [spiderFootScanId, setSpiderFootScanId] = useState("");
   const [spiderFootEventType, setSpiderFootEventType] = useState("ALL");
+  const [spiderFootScanName, setSpiderFootScanName] = useState("");
+  const [spiderFootModuleList, setSpiderFootModuleList] = useState("");
+  const [spiderFootTypeList, setSpiderFootTypeList] = useState("");
+  const [spiderFootLogLimit, setSpiderFootLogLimit] = useState(100);
+  const [spiderFootSummaryBy, setSpiderFootSummaryBy] = useState<"type" | "module">("type");
+  const [spiderFootCorrelationId, setSpiderFootCorrelationId] = useState("");
+  const [spiderFootExportFormat, setSpiderFootExportFormat] = useState("json");
+  const [spiderFootConfigToken, setSpiderFootConfigToken] = useState("");
+  const [spiderFootConfigJson, setSpiderFootConfigJson] = useState("{}");
   const [awesomeTiType, setAwesomeTiType] = useState("auto");
   const [socType, setSocType] = useState("auto");
   const [socSeverity, setSocSeverity] = useState("");
 
   const activeToolDef = TOOLS.find(t => t.id === activeTool);
+
+  useEffect(() => {
+    const requestedTool = new URLSearchParams(window.location.search).get("tool");
+    if (requestedTool && TOOLS.some((tool) => tool.id === requestedTool)) {
+      setActiveTool(requestedTool);
+    }
+  }, []);
 
   const handleToolChange = (id: string) => {
     setActiveTool(id);
@@ -83,7 +99,11 @@ export default function ToolsPage() {
           res = await api.toolsGoogleDorks(input, dorkMode);
           break;
         case 'spiderfoot':
-          res = await api.toolsSpiderFoot(input, spiderFootType, spiderFootUseCase);
+          res = await api.toolsSpiderFoot(input, spiderFootType, spiderFootUseCase, {
+            scanName: spiderFootScanName,
+            moduleList: spiderFootModuleList,
+            typeList: spiderFootTypeList,
+          });
           break;
         case 'awesome-ti':
           res = await api.awesomeTiLookup(input, awesomeTiType);
@@ -131,11 +151,11 @@ export default function ToolsPage() {
           break;
         case "logs":
           if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
-          res = await api.spiderFootScanLogs(scanId, 100);
+          res = await api.spiderFootScanLogs(scanId, spiderFootLogLimit);
           break;
         case "summary":
           if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
-          res = await api.spiderFootScanSummary(scanId);
+          res = await api.spiderFootScanSummary(scanId, spiderFootSummaryBy);
           break;
         case "results":
           if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
@@ -147,11 +167,11 @@ export default function ToolsPage() {
           break;
         case "correlations":
           if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
-          res = await api.spiderFootScanCorrelations(scanId);
+          res = await api.spiderFootScanCorrelations(scanId, spiderFootCorrelationId.trim() || undefined);
           break;
         case "export":
           if (!scanId) throw new Error("Enter a SpiderFoot scan ID first.");
-          res = await api.spiderFootScanExport(scanId, "json");
+          res = await api.spiderFootScanExport(scanId, spiderFootExportFormat);
           break;
         case "search":
           if (!input.trim()) throw new Error("Enter a search value in the main input first.");
@@ -167,6 +187,10 @@ export default function ToolsPage() {
           break;
         case "config":
           res = await api.spiderFootConfig();
+          break;
+        case "save-config":
+          if (!spiderFootConfigToken.trim()) throw new Error("Load configuration and enter its CSRF token first.");
+          res = await api.spiderFootSaveConfig(spiderFootConfigToken.trim(), JSON.parse(spiderFootConfigJson));
           break;
       }
 
@@ -806,7 +830,7 @@ export default function ToolsPage() {
                 {activeTool === 'spiderfoot' && (
                   <div className="space-y-4">
                     <div className="flex flex-wrap gap-4">
-                      {["domain", "hostname", "ip", "netblock", "email", "username", "phone"].map((type) => (
+                      {["domain", "hostname", "ip", "netblock", "asn", "email", "username", "phone", "humanname", "bitcoin"].map((type) => (
                         <label key={type} className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer capitalize">
                           <input type="radio" name="spiderfoot-type" value={type} checked={spiderFootType === type} onChange={e => setSpiderFootType(e.target.value)} className="text-primary focus:ring-primary bg-black border-white/20"/>
                           {type}
@@ -820,6 +844,11 @@ export default function ToolsPage() {
                           {mode === "passive" ? "Passive OSINT" : mode}
                         </label>
                       ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <input value={spiderFootScanName} onChange={(e) => setSpiderFootScanName(e.target.value)} placeholder="Optional scan name" className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white" />
+                      <input value={spiderFootModuleList} onChange={(e) => setSpiderFootModuleList(e.target.value)} placeholder="Module IDs, comma-separated" className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono" />
+                      <input value={spiderFootTypeList} onChange={(e) => setSpiderFootTypeList(e.target.value)} placeholder="Requested event types" className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <input
@@ -837,6 +866,28 @@ export default function ToolsPage() {
                         className="bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary"
                       />
                     </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <label className="text-xs text-on-surface-variant">Log limit
+                        <input type="number" min={1} max={1000} value={spiderFootLogLimit} onChange={(e) => setSpiderFootLogLimit(Math.max(1, Math.min(1000, Number(e.target.value))))} className="mt-1 w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white" />
+                      </label>
+                      <label className="text-xs text-on-surface-variant">Summary grouping
+                        <select value={spiderFootSummaryBy} onChange={(e) => setSpiderFootSummaryBy(e.target.value as "type" | "module")} className="mt-1 w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white"><option value="type">Event type</option><option value="module">Module</option></select>
+                      </label>
+                      <label className="text-xs text-on-surface-variant">Export format
+                        <select value={spiderFootExportFormat} onChange={(e) => setSpiderFootExportFormat(e.target.value)} className="mt-1 w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white"><option value="json">JSON</option><option value="csv">CSV</option><option value="gexf">GEXF graph</option></select>
+                      </label>
+                      <label className="text-xs text-on-surface-variant">Correlation ID
+                        <input value={spiderFootCorrelationId} onChange={(e) => setSpiderFootCorrelationId(e.target.value)} className="mt-1 w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white font-mono" />
+                      </label>
+                    </div>
+                    <details className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <summary className="cursor-pointer text-xs font-bold text-on-surface-variant">Advanced configuration editor</summary>
+                      <div className="mt-3 space-y-2">
+                        <input value={spiderFootConfigToken} onChange={(e) => setSpiderFootConfigToken(e.target.value)} placeholder="SpiderFoot configuration CSRF token" className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs" />
+                        <textarea value={spiderFootConfigJson} onChange={(e) => setSpiderFootConfigJson(e.target.value)} rows={6} spellCheck={false} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs" />
+                        <button type="button" onClick={() => runSpiderFootAction("save-config")} disabled={isLoading} className="text-xs font-bold px-3 py-2 rounded-lg border bg-primary/10 border-primary/20 text-primary">Save configuration</button>
+                      </div>
+                    </details>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {[
                         ["health", "Health"],

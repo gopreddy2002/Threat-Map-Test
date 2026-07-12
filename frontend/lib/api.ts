@@ -16,7 +16,7 @@ const isDevelopment = process.env.NODE_ENV === "development";
 const base = normalizeApiBaseUrl(
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  (isDevelopment ? "http://127.0.0.1:8000" : "/")
+  (isDevelopment ? "http://127.0.0.1:8000" : "/api/proxy")
 );
 
 export const API_BASE_URL = base;
@@ -30,6 +30,20 @@ const apiClient = axios.create({
 });
 
 export const api = {
+  downloadFile: async (path: string, fallbackName: string) => {
+    const response = await apiClient.get(path, { responseType: "blob" });
+    const disposition = response.headers["content-disposition"] || "";
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = match?.[1] || fallbackName;
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
   // Analyze indicator
   analyzeIndicator: async (indicator: string, type: "ip" | "url" | "domain" | "hash", refresh = false): Promise<ScanResponse> => {
     // Determine exact endpoint path based on type
@@ -483,6 +497,14 @@ export const api = {
     const response = await apiClient.get<AttackPrediction>("/dashboard/prediction/");
     return response.data;
   },
+
+  downloadScanExport: (scanId: string, format: "pdf" | "csv" | "json") =>
+    api.downloadFile(`/export/${scanId}?format=${format}`, `threatmap-${scanId}.${format}`),
+
+  downloadWatchlistExport: (format: "csv" | "json" = "csv") =>
+    api.downloadFile(`/export/watchlist/bulk?format=${format}`, `threatmap-watchlist.${format}`),
+
+  downloadRssFeed: () => api.downloadFile(`/export/feed/rss`, "threatmap-feed.xml"),
 
   getCountryComparison: async (countryA: string, countryB: string) => {
     const response = await apiClient.get("/compare/countries/", {

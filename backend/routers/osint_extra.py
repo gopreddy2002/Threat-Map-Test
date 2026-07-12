@@ -32,33 +32,6 @@ class DarkWebInvestigationResponse(BaseModel):
     mentions: List[Dict[str, Any]]
 
 
-def _build_fallback_mentions(query: str, limit: int) -> List[Dict[str, Any]]:
-    seed = query.strip() or "target"
-    return [
-        {
-            "title": f"Forum chatter around {seed}",
-            "source": "public-forum-fallback",
-            "snippet": f"Likely discussion clusters suggest {seed} is being referenced in underground communities.",
-            "confidence": "medium",
-            "type": "forum",
-        },
-        {
-            "title": f"Credential theft discussion for {seed}",
-            "source": "leak-market-fallback",
-            "snippet": f"Initial triage indicates {seed} may be associated with credential theft and marketplace listings.",
-            "confidence": "medium",
-            "type": "marketplace",
-        },
-        {
-            "title": f"Potential infrastructure references for {seed}",
-            "source": "infrastructure-fallback",
-            "snippet": f"Infrastructure and access-related references surfaced during the investigation for {seed}.",
-            "confidence": "low",
-            "type": "infrastructure",
-        },
-    ][:limit]
-
-
 @router.post("/darkweb/investigate", response_model=DarkWebInvestigationResponse)
 async def investigate_dark_web(payload: DarkWebInvestigationRequest):
     """Create a structured, AI-assisted dark-web investigation brief for a subject."""
@@ -68,7 +41,7 @@ async def investigate_dark_web(payload: DarkWebInvestigationRequest):
 
     limit = max(1, min(int(payload.limit or 5), 10))
     mentions: List[Dict[str, Any]] = []
-    sources_consulted = ["Open web index", "Dark-web heuristic model", "ThreatMap summarizer"]
+    sources_consulted = ["DuckDuckGo public web index"]
 
     try:
         search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(f'dark web {query}') }"
@@ -92,10 +65,7 @@ async def investigate_dark_web(payload: DarkWebInvestigationRequest):
     except Exception as exc:
         logger.warning(f"Dark web investigation search failed for {query}: {exc}")
 
-    if not mentions:
-        mentions = _build_fallback_mentions(query, limit)
-    else:
-        mentions = mentions[:limit]
+    mentions = mentions[:limit]
 
     if len(mentions) >= 3:
         risk_level = "high"
@@ -106,9 +76,12 @@ async def investigate_dark_web(payload: DarkWebInvestigationRequest):
     elif len(mentions) == 2:
         risk_level = "medium"
         summary = f"The initial pass for '{query}' returned a moderate amount of relevant chatter and should be validated with deeper evidence."
-    else:
+    elif len(mentions) == 1:
         risk_level = "low"
-        summary = f"The initial pass for '{query}' returned limited evidence; continue monitoring for new sightings and related infrastructure."
+        summary = f"The public-web pass for '{query}' returned one unverified lead."
+    else:
+        risk_level = "unknown"
+        summary = f"No verifiable results were returned for '{query}'. This is not evidence that the target is clean."
 
     return {
         "query": query,
@@ -574,8 +547,7 @@ async def enumerate_dns_records(domain: str):
 # ─────────────────────────────────────────
 @router.get("/shodan/{ip}")
 async def shodan_lookup(ip: str):
-    """Shodan endpoint to demonstrate IoT/Server vulnerabilities.
-    Falls back to mock data if SHODAN_API_KEY is not set."""
+    """Return only live Shodan data; never substitute sample host intelligence."""
     from core.config import settings
     api_key = settings.SHODAN_API_KEY
     

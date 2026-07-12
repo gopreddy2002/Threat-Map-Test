@@ -1,12 +1,14 @@
 import io
 import csv
 import json
+import html
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from models.database import get_db, Scan, Watchlist
+from core.config import settings
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -383,7 +385,7 @@ def export_stix(scan_id: str, db: Session = Depends(get_db)):
                 "external_references": [
                     {
                         "source_name": "ThreatMap",
-                        "url": f"http://localhost:3000/results/{scan.id}",
+                        "url": f"{settings.PUBLIC_APP_URL.rstrip('/')}/results/{scan.id}",
                         "description": "ThreatMap scan result"
                     }
                 ],
@@ -453,14 +455,16 @@ def export_rss_feed(db: Session = Depends(get_db)):
     output.write('<rss version="2.0">\n')
     output.write('<channel>\n')
     output.write('  <title>ThreatMap High Risk Intelligence Feed</title>\n')
-    output.write('  <link>http://localhost:3000</link>\n')
+    app_url = settings.PUBLIC_APP_URL.rstrip("/")
+    output.write(f'  <link>{html.escape(app_url)}</link>\n')
     output.write('  <description>Automated OSINT alerts for critical threats</description>\n')
     
     for scan in scans:
         output.write('  <item>\n')
-        output.write(f'    <title>{scan.risk_level} Threat Detected: {scan.indicator}</title>\n')
-        output.write(f'    <link>http://localhost:3000/results/{scan.id}</link>\n')
-        output.write(f'    <description>{scan.summary or "Automated scan finding"}. Score: {scan.risk_score}</description>\n')
+        output.write(f'    <title>{html.escape(scan.risk_level)} Threat Detected: {html.escape(scan.indicator)}</title>\n')
+        output.write(f'    <link>{html.escape(f"{app_url}/results/{scan.id}")}</link>\n')
+        description = f'{scan.summary or "Automated scan finding"}. Score: {scan.risk_score}'
+        output.write(f'    <description>{html.escape(description)}</description>\n')
         output.write(f'    <pubDate>{scan.created_at.strftime("%a, %d %b %Y %H:%M:%S GMT")}</pubDate>\n')
         output.write(f'    <guid>{scan.id}</guid>\n')
         output.write('  </item>\n')

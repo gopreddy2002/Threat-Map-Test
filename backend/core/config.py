@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "ThreatMap API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
+    PUBLIC_APP_URL: str = "http://localhost:3000"
+    AUTH_REQUIRED: bool = True
+    THREATMAP_API_KEY: Optional[str] = None
     
     # Database
     DATABASE_URL: str = Field(

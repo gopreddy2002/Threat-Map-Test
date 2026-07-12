@@ -72,12 +72,13 @@ class VirusTotalService:
     def _get_fallback_data(self) -> Dict[str, Any]:
         # Return CLEAN zeros — API failures must never inflate risk scores
         return {
-            "malicious": 0,
-            "suspicious": 0,
-            "harmless": 0,
-            "undetected": 0,
-            "reputation": 0,
-            "status": "fallback",
+            "malicious": None,
+            "suspicious": None,
+            "harmless": None,
+            "undetected": None,
+            "reputation": None,
+            "status": "unavailable",
+            "detail": "VirusTotal lookup did not return live data.",
             "raw": None
         }
 

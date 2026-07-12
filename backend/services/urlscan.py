@@ -68,7 +68,8 @@ class URLScanService:
             "server": "",
             "ip": "",
             "asn": "",
-            "overall_status": "fallback",
+            "overall_status": "unavailable",
+            "detail": "URLScan lookup did not return live data.",
             "raw": None
         }
 

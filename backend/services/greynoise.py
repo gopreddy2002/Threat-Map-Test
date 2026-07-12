@@ -55,12 +55,13 @@ class GreyNoiseService:
     def _get_fallback_data(self, ip: str) -> Dict[str, Any]:
         # Return CLEAN unknown — API failures must never inflate risk scores
         return {
-            "noise": False,
-            "riot": False,
+            "noise": None,
+            "riot": None,
             "classification": "unknown",
             "name": "Unknown",
             "link": "",
-            "status": "fallback",
+            "status": "unavailable",
+            "detail": "GreyNoise lookup did not return live data.",
             "raw": None
         }
 

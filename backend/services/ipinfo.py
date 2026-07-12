@@ -36,26 +36,26 @@ class IPInfoService:
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
-                    loc = data.get("loc", "37.751,-97.822")
-                    lat, lon = 37.751, -97.822
+                    loc = data.get("loc", "")
+                    lat, lon = None, None
                     try:
                         lat_s, lon_s = loc.split(",")
                         lat, lon = float(lat_s), float(lon_s)
-                    except ValueError:
+                    except (ValueError, AttributeError):
                         pass
 
                     result = {
                         "ip": data.get("ip", ip),
                         "city": data.get("city", "Unknown"),
                         "region": data.get("region", "Unknown"),
-                        "country": data.get("country", "US"),
+                        "country": data.get("country", "Unknown"),
                         "loc": loc,
                         "lat": lat,
                         "lon": lon,
                         "org": data.get("org", "Unknown ISP"),
                         "asn": data.get("org", "").split(" ")[0] if "org" in data else "Unknown",
                         "postal": data.get("postal", ""),
-                        "timezone": data.get("timezone", "UTC"),
+                        "timezone": data.get("timezone", "Unknown"),
                         "status": "success",
                         "raw": data
                     }
@@ -88,7 +88,8 @@ class IPInfoService:
             "asn": "Unknown",
             "postal": "",
             "timezone": "Unknown",
-            "status": "fallback",
+            "status": "unavailable",
+            "detail": "IPinfo lookup did not return live data.",
             "raw": None
         }
 

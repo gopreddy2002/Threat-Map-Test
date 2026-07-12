@@ -14,13 +14,14 @@ print("Starting main.py...")
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from core.security import PUBLIC_PATHS, authenticate_request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
 try:
-    from core.config import settings
+    from core.config import settings, is_configured_secret
     from models.database import init_db, get_db, Scan, Watchlist, Alert
     from models.schemas import AttackPrediction, DashboardStats
     from alert_models import AlertRule, AlertNotification
@@ -127,6 +128,20 @@ print("FastAPI app created OK")
 # Register Limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.middleware("http")
+async def require_api_authentication(request: Request, call_next):
+    if request.url.path.startswith(settings.API_V1_STR) and request.url.path not in PUBLIC_PATHS:
+        try:
+            authenticate_request(request)
+        except HTTPException as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+                headers=exc.headers,
+            )
+    return await call_next(request)
 
 # CORS config: allow Railway + local dev
 _raw_origins = os.getenv("CORS_ORIGINS", "")
@@ -325,6 +340,20 @@ def correlate_scan(scan_id: str, db: Session = Depends(get_db)):
     return get_correlated_iocs(scan, db)
 
 
+@app.delete(f"{settings.API_V1_STR}/analyze/scan/{{scan_id}}", tags=["Scans"])
+def delete_scan_report(scan_id: str, db: Session = Depends(get_db)):
+    """Delete one scan and any campaign references created for it."""
+    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan record not found.")
+
+    from models.database import CampaignIOC
+    db.query(CampaignIOC).filter(CampaignIOC.scan_id == scan_id).delete(synchronize_session=False)
+    db.delete(scan)
+    db.commit()
+    return {"status": "deleted", "scan_id": scan_id}
+
+
 
 
 @app.get(f"{settings.API_V1_STR}/dashboard/stats", response_model=DashboardStats, tags=["Telemetry"])
@@ -384,14 +413,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
                 "low": int((low_risk_count / total_all_scans) * 100)
             }
         else:
-            dist = {"critical": 25, "high": 35, "medium": 30, "low": 10}
+            dist = {"critical": 0, "high": 0, "medium": 0, "low": 0}
 
         # 8. Malware prevalence ranking
-        malware_prevalence = [
-            {"name": "Ransom.LockBit", "percentage": 82, "trend": "up"},
-            {"name": "Emotet.Botnet", "percentage": 65, "trend": "down"},
-            {"name": "AgentTesla.Spy", "percentage": 48, "trend": "up"}
-        ]
+        malware_prevalence = []
 
         stats = DashboardStats(
             total_scans_24h=scans_count,
@@ -471,26 +496,28 @@ async def get_api_health():
     import httpx
     import asyncio
     checks = [
-        ("VirusTotal", "https://www.virustotal.com/api/v3/urls", {"x-apikey": settings.VIRUSTOTAL_API_KEY}),
-        ("AbuseIPDB", "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8", {"Key": settings.ABUSEIPDB_API_KEY, "Accept": "application/json"}),
-        ("AlienVault", "https://otx.alienvault.com/api/v1/user/me", {"X-OTX-API-KEY": settings.ALIENVAULT_API_KEY}),
-        ("IPinfo", f"https://ipinfo.io/8.8.8.8/json?token={settings.IPINFO_API_TOKEN}", {}),
-        ("GreyNoise", "https://api.greynoise.io/v3/community/8.8.8.8", {"key": settings.GREYNOISE_API_KEY}),
+        ("VirusTotal", "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8", {"x-apikey": settings.VIRUSTOTAL_API_KEY}, settings.VIRUSTOTAL_API_KEY),
+        ("AbuseIPDB", "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8", {"Key": settings.ABUSEIPDB_API_KEY, "Accept": "application/json"}, settings.ABUSEIPDB_API_KEY),
+        ("AlienVault", "https://otx.alienvault.com/api/v1/user/me", {"X-OTX-API-KEY": settings.ALIENVAULT_API_KEY}, settings.ALIENVAULT_API_KEY),
+        ("IPinfo", f"https://ipinfo.io/8.8.8.8/json?token={settings.IPINFO_API_TOKEN}", {}, settings.IPINFO_API_TOKEN),
+        ("GreyNoise", "https://api.greynoise.io/v3/community/8.8.8.8", {"key": settings.GREYNOISE_API_KEY}, settings.GREYNOISE_API_KEY),
     ]
     
-    async def ping_api(client, name, url, headers):
+    async def ping_api(client, name, url, headers, secret):
+        if not is_configured_secret(secret):
+            return {"name": name, "status": "unavailable", "code": None, "detail": "API key is not configured"}
         try:
             resp = await client.get(url, headers=headers)
             return {
                 "name": name,
-                "status": "online" if resp.status_code < 500 else "degraded",
+                "status": "online" if resp.status_code == 200 else "degraded",
                 "code": resp.status_code
             }
         except Exception:
             return {"name": name, "status": "offline", "code": None}
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        tasks = [ping_api(client, name, url, headers) for name, url, headers in checks]
+        tasks = [ping_api(client, name, url, headers, secret) for name, url, headers, secret in checks]
         statuses = await asyncio.gather(*tasks)
         
     return {"apis": statuses}

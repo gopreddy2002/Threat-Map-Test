@@ -55,14 +55,15 @@ class AbuseIPDBService:
         # Return CLEAN zeros — API failures must never inflate risk scores
         return {
             "ipAddress": ip,
-            "abuseConfidenceScore": 0,
-            "totalReports": 0,
-            "countryCode": "US",
-            "countryName": "United States",
+            "abuseConfidenceScore": None,
+            "totalReports": None,
+            "countryCode": None,
+            "countryName": None,
             "domain": "",
             "isp": "Unknown",
-            "isTor": False,
-            "status": "fallback",
+            "isTor": None,
+            "status": "unavailable",
+            "detail": "AbuseIPDB lookup did not return live data.",
             "raw": None
         }
 

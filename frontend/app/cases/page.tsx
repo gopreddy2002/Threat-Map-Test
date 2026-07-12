@@ -3,38 +3,18 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const mockCases = [
-  {
-    id: "CAS-1042",
-    title: "Suspicious Login from Unusual Geo",
-    severity: "High",
-    status: "Investigating",
-    assignee: "Alice Smith",
-    updatedAt: "10 mins ago",
-    iocs: 4,
-  },
-  {
-    id: "CAS-1043",
-    title: "Malware Beaconing Detected (C2)",
-    severity: "Critical",
-    status: "Open",
-    assignee: "Unassigned",
-    updatedAt: "1 hour ago",
-    iocs: 12,
-  },
-  {
-    id: "CAS-1039",
-    title: "Phishing Campaign Targeting Executives",
-    severity: "Medium",
-    status: "Closed",
-    assignee: "Bob Jones",
-    updatedAt: "2 days ago",
-    iocs: 2,
-  }
-];
+type IncidentCase = {
+  id: string;
+  title: string;
+  severity: string;
+  status: string;
+  assignee: string;
+  updatedAt: string;
+  iocs: number;
+};
 
 export default function CasesPage() {
-  const [cases, setCases] = useState(mockCases);
+  const [cases] = useState<IncidentCase[]>([]);
   const [filter, setFilter] = useState("All");
 
   const filteredCases = filter === "All" ? cases : cases.filter(c => c.status === filter);
@@ -66,7 +46,7 @@ export default function CasesPage() {
             Track and manage active security incidents, investigations, and remediation tasks.
           </p>
         </div>
-        <button className="px-4 py-2 bg-primary text-black font-semibold rounded-lg shadow-lg shadow-primary/20 hover:scale-105 transition-transform flex items-center gap-2">
+        <button disabled title="Case persistence API is not configured" className="px-4 py-2 bg-primary/40 text-black/60 font-semibold rounded-lg flex items-center gap-2 cursor-not-allowed">
           <span className="material-symbols-outlined text-[20px]">add</span>
           New Case
         </button>

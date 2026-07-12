@@ -501,33 +501,30 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
           {/* Export Downloads */}
           <div className="flex bg-surface-container-low rounded-lg p-1 border border-white/5">
-            <a
-              href={api.getExportUrl(scan.id, "pdf")}
-              download
+            <button
+              onClick={() => api.downloadScanExport(scan.id, "pdf")}
               className="p-2 hover:bg-white/5 rounded text-on-surface-variant hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
               title="Export PDF Report"
             >
               <Download size={14} />
               <span className="hidden sm:inline">PDF</span>
-            </a>
-            <a
-              href={api.getExportUrl(scan.id, "csv")}
-              download
+            </button>
+            <button
+              onClick={() => api.downloadScanExport(scan.id, "csv")}
               className="p-2 hover:bg-white/5 rounded text-on-surface-variant hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
               title="Export CSV Telemetry"
             >
               <Download size={14} />
               <span className="hidden sm:inline">CSV</span>
-            </a>
-            <a
-              href={api.getExportUrl(scan.id, "json")}
-              download
+            </button>
+            <button
+              onClick={() => api.downloadScanExport(scan.id, "json")}
               className="p-2 hover:bg-white/5 rounded text-on-surface-variant hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
               title="Export JSON Metadata"
             >
               <Download size={14} />
               <span className="hidden sm:inline">JSON</span>
-            </a>
+            </button>
             <button
               onClick={async () => {
                 try {

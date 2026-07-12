@@ -54,7 +54,8 @@ class OSINTService:
                 "creation_date": "",
                 "expiration_date": "",
                 "registrant_org": "",
-                "status": "fallback"
+                "status": "unavailable",
+                "detail": "WHOIS lookup did not return live data."
             }
 
     async def get_ssl_metadata(self, host: str, port: int = 443) -> Dict[str, Any]:
@@ -100,7 +101,8 @@ class OSINTService:
                 "valid_to": "",
                 "serial_number": "",
                 "version": None,
-                "status": "fallback"
+                "status": "unavailable",
+                "detail": "SSL inspection did not return live data."
             }
 
 osint_service = OSINTService()

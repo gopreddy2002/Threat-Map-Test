@@ -115,21 +115,20 @@ export default function WatchlistPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <a
-            href={api.getRssFeedUrl()}
-            target="_blank"
+          <button
+            onClick={() => api.downloadRssFeed()}
             className="p-2.5 bg-[#f26522]/10 text-[#f26522] rounded-lg hover:bg-[#f26522]/20 border border-[#f26522]/30 transition-all flex items-center justify-center"
             title="RSS Threat Feed"
           >
             <Rss size={16} />
-          </a>
-          <a
-            href={api.getBulkExportUrl("csv")}
+          </button>
+          <button
+            onClick={() => api.downloadWatchlistExport("csv")}
             className="py-2 px-4 bg-surface-container border border-white/10 text-on-surface-variant text-xs font-bold rounded-lg hover:bg-white/5 hover:text-white transition-all flex items-center gap-2"
           >
             <Download size={14} />
             BULK EXPORT
-          </a>
+          </button>
           <button
             onClick={() => scanMutation.mutate()}
             disabled={isScanning || watchlist.length === 0}

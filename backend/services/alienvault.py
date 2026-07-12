@@ -62,10 +62,11 @@ class AlienVaultService:
 
     def _get_fallback_data(self, indicator: str) -> Dict[str, Any]:
         return {
-            "pulse_count": 0,
+            "pulse_count": None,
             "tags": [],
             "malware_families": [],
-            "status": "fallback",
+            "status": "unavailable",
+            "detail": "AlienVault OTX lookup did not return live data.",
             "raw": None
         }
 

@@ -54,7 +54,7 @@ Format your responses using proper Markdown:
     except Exception as e:
         return f"Error with {model}: {str(e)}"
 
-async def chat_with_image(message: str, base64_image: str):
+async def chat_with_image(message: str, base64_image: str, media_type: str = "image/jpeg"):
     if not client:
         return "Error: GROQ_API_KEY is not configured. Vision AI is unavailable."
     try:
@@ -66,7 +66,7 @@ async def chat_with_image(message: str, base64_image: str):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": message},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{base64_image}"}}
                 ]
             }
         ]
@@ -80,4 +80,4 @@ async def chat_with_image(message: str, base64_image: str):
         
         return response.choices[0].message.content
     except Exception as e:
-        return f"Error with vision model {model}: {str(e)}"
+        raise RuntimeError(f"Vision model {model} failed: {e}") from e

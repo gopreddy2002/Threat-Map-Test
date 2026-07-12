@@ -110,26 +110,34 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       }
     };
 
+    const refreshIfUnverified = async (data: ScanResponse) => {
+      const reportData = hasNoLiveReputationFeeds(data)
+        ? await api.analyzeIndicator(data.indicator, data.type, true)
+        : data;
+      if (reportData.id !== data.id) {
+        addToast("Live reputation feeds restored. Report refreshed.", "success");
+      }
+
+      const cacheKey = `threatmap:scan:${reportData.id}`;
+      const serializedData = JSON.stringify(reportData);
+      sessionStorage.setItem(cacheKey, serializedData);
+      localStorage.setItem(cacheKey, serializedData);
+
+      return reportData;
+    };
+
     async function fetchReport() {
       try {
         setLoading(true);
         const data = await api.getScanReport(id);
-        const reportData = hasNoLiveReputationFeeds(data)
-          ? await api.analyzeIndicator(data.indicator, data.type, true)
-          : data;
-        if (reportData.id !== data.id) {
-          addToast("Live reputation feeds restored. Report refreshed.", "success");
-        }
-        const cacheKey = `threatmap:scan:${reportData.id}`;
-        const serializedData = JSON.stringify(reportData);
-        sessionStorage.setItem(cacheKey, serializedData);
-        localStorage.setItem(cacheKey, serializedData);
+        const reportData = await refreshIfUnverified(data);
         await hydrateReport(reportData);
       } catch (err: any) {
         console.error(err);
         const cached = getCachedReport();
         if (cached) {
-          await hydrateReport(cached);
+          const reportData = await refreshIfUnverified(cached);
+          await hydrateReport(reportData);
           setError("");
           return;
         }

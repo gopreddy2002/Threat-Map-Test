@@ -13,15 +13,7 @@
   ],
   "routes": [
     {
-      "src": "/api/auth/(.*)",
-      "dest": "/frontend/api/auth/$1"
-    },
-    {
-      "src": "/api/proxy/(.*)",
-      "dest": "/frontend/api/proxy/$1"
-    },
-    {
-      "src": "/api/(.*)",
+      "src": "/api/v1/(.*)",
       "dest": "/backend/main.py"
     },
     {

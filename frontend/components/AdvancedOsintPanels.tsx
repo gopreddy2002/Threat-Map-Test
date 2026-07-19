@@ -19,10 +19,12 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
     techStack: null,
   });
   const [loading, setLoading] = useState(true);
+  const [requestFailed, setRequestFailed] = useState(false);
 
   useEffect(() => {
     async function fetchOsint() {
       setLoading(true);
+      setRequestFailed(false);
       const indicator = scan.indicator;
       const type = scan.type;
       
@@ -77,10 +79,15 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
           promises.push(api.getTechStack(domain).then(r => newData.techStack = r));
         }
 
-        await Promise.allSettled(promises);
+        const timeout = new Promise<PromiseSettledResult<never>[]>((resolve) =>
+          window.setTimeout(() => resolve([]), 15000)
+        );
+        const results = await Promise.race([Promise.allSettled(promises), timeout]);
+        setRequestFailed(results.length === 0 || results.every(result => result.status === "rejected"));
         setData(newData);
       } catch (e) {
         console.error("OSINT fetch error", e);
+        setRequestFailed(true);
       } finally {
         setLoading(false);
       }
@@ -111,11 +118,15 @@ export default function AdvancedOsintPanels({ scan }: { scan: ScanResponse }) {
     return !["fallback", "error", "unavailable", "api_key_required"].includes(status) && value.mocked !== true;
   };
 
+  const requestFinished = !loading;
+  const status = requestFailed ? "Unavailable" : requestFinished ? "Completed" : "Gathering...";
+
   return (
     <div className="mt-8">
-      <h3 className="font-bold font-label-caps text-label-caps text-[12px] text-on-surface-variant uppercase tracking-wider mb-4">
-        Advanced Active Telemetry
+      <h3 className="font-bold font-label-caps text-label-caps text-[12px] text-on-surface-variant uppercase tracking-wider mb-4 flex items-center gap-2">
+        Advanced Active Telemetry <span className="text-[9px] px-1.5 py-0.5 rounded border border-white/10">{status}</span>
       </h3>
+      {requestFailed && <p className="text-xs text-on-surface-variant mb-4">Advanced telemetry is unavailable. The main scan report is still complete.</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Shodan Panel */}

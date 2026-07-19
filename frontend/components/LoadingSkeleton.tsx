@@ -1,8 +1,43 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+
+const stages = [
+  "Collecting provider data",
+  "Calculating risk score",
+  "Generating AI analysis",
+  "Preparing report",
+];
 
 export const LoadingSkeleton: React.FC = () => {
+  const [activeStage, setActiveStage] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveStage((current) => Math.min(current + 1, stages.length - 1));
+    }, 2200);
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6 py-8 animate-pulse">
+    <div className="w-full max-w-6xl mx-auto space-y-6 py-8" role="status" aria-live="polite">
+      <div className="glass-panel rounded-xl border border-primary/20 p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <div>
+            <h2 className="text-lg font-bold text-white">Analyzing indicator</h2>
+            <p className="text-xs text-on-surface-variant">This report will appear automatically when processing completes.</p>
+          </div>
+        </div>
+        <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {stages.map((stage, index) => (
+            <li key={stage} className={`rounded-lg border px-3 py-3 text-xs ${index < activeStage ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : index === activeStage ? "border-primary/40 bg-primary/10 text-primary" : "border-white/5 bg-white/[0.02] text-on-surface-variant"}`}>
+              <span className="font-bold mr-2">{index < activeStage ? "✓" : index + 1}</span>{stage}
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="space-y-6 animate-pulse" aria-hidden="true">
       {/* Risk Gauge and top summary row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 glass-panel p-lg rounded-xl flex flex-col items-center justify-center min-h-[300px]">
@@ -36,6 +71,7 @@ export const LoadingSkeleton: React.FC = () => {
             <div className="h-4 w-full bg-white/5 rounded" />
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

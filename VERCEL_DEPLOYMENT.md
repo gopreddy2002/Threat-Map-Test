@@ -2,6 +2,21 @@
 
 This guide walks you through deploying ThreatMap to Vercel with both the Next.js frontend and Python FastAPI backend.
 
+## Required authentication environment variables
+
+Configure these in Vercel for Production, Preview, and Development, then redeploy:
+
+```env
+NEXTAUTH_URL=https://threat-map-test-one.vercel.app
+NEXTAUTH_SECRET=<generate-a-strong-random-secret>
+GOOGLE_CLIENT_ID=<google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
+```
+
+The Google OAuth application must allow
+`https://threat-map-test-one.vercel.app/api/auth/callback/google` as an authorized redirect URI.
+GitHub OAuth is not configured in this application.
+
 ## Prerequisites
 
 - **Vercel Account**: Sign up at https://vercel.com

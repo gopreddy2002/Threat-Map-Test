@@ -78,7 +78,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState<"overview" | "graph" | "notes">("overview");
   const [scanHistory, setScanHistory] = useState<any[]>([]);
   const { addToast } = useToast();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [isSavingDrive, setIsSavingDrive] = useState(false);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       }
 
       // Check if item is already in watchlist. Do not fail the report if this request fails.
-      try {
+      if (session?.user) try {
         const watchlist = await api.getWatchlist();
         const found = watchlist.some((w: any) => w.indicator === data.indicator);
         setIsAddedToWatch(found);
@@ -155,8 +155,8 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     fetchReport();
     
     // Pre-fetch campaigns for the modal
-    api.getCampaigns().then(setCampaigns).catch(console.error);
-  }, [id, addToast]);
+    if (session?.user) api.getCampaigns().then(setCampaigns).catch(console.error);
+  }, [id, addToast, session?.user]);
 
   // Separately fetch web vuln data after scan loads
   useEffect(() => {
@@ -186,6 +186,10 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
   const handleAddToWatchlist = async () => {
     if (!scan) return;
+    if (!session?.user) {
+      addToast("Sign in to use this feature.", "error");
+      return;
+    }
     try {
       await api.addToWatchlist(scan.indicator, scan.type, watchNotes);
       setIsAddedToWatch(true);
@@ -296,7 +300,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
         color: "border-emerald-500/30 bg-emerald-500/10",
         titleColor: "text-emerald-400",
         title: "SAFE",
-        text: "No threats detected by any security feed. This target appears clean.",
+        text: "No threats were detected by the available security sources. Some providers were unavailable.",
       };
     } else if (score < 60) {
       return {
@@ -363,9 +367,20 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
       ? [ai.recommendations]
       : [];
   const reportSummary = scan.summary || ai.summary || "No analyst summary was returned for this scan.";
-  // count active feeds
-  const activeFeedCount = [vt, abuse, gn, otx, urlscan].filter(isRealFeedResult).length;
-  const plainEnglish = getPlainEnglishSummary(scan.risk_score, activeFeedCount);
+  const providerData = scan.type === "ip"
+    ? [vt, abuse, gn, otx]
+    : scan.type === "domain" || scan.type === "url"
+      ? [vt, otx, urlscan]
+      : [vt, otx];
+  const providers = providerData.map(provider => ({
+    data: provider,
+    status: isRealFeedResult(provider) ? "success" : "unavailable",
+  }));
+  const liveProviderCount = providers.filter(provider => provider.status === "success").length;
+  const totalProviderCount = providers.length;
+  const coverage = liveProviderCount / totalProviderCount;
+  const confidence = coverage >= 0.8 ? "HIGH" : coverage >= 0.5 ? "MEDIUM" : "LOW";
+  const plainEnglish = getPlainEnglishSummary(scan.risk_score, liveProviderCount);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">
@@ -467,6 +482,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-3">
+          {!session?.user && sessionStatus !== "loading" && (
+            <span className="w-full text-[11px] text-yellow-300">Login required. Sign in to use protected report features.</span>
+          )}
           <button
             onClick={() => {
               navigator.clipboard.writeText(window.location.href);
@@ -480,7 +498,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           </button>
 
           <button
-            onClick={() => (isAddedToWatch ? null : setShowWatchModal(true))}
+            onClick={() => (session?.user ? (isAddedToWatch ? null : setShowWatchModal(true)) : addToast("Sign in to use this feature.", "error"))}
+            disabled={sessionStatus === "loading" || !session?.user}
+            title={session?.user ? "Add indicator to watchlist" : "Sign in to use this feature."}
             className={`py-2 px-4 rounded-lg font-bold text-xs font-label-caps tracking-wider transition-all duration-150 flex items-center gap-2 ${
               isAddedToWatch
                 ? "bg-primary-container/20 text-primary border border-primary/20 cursor-default"
@@ -492,7 +512,9 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
           </button>
 
           <button
-            onClick={() => setShowCampaignModal(true)}
+            onClick={() => session?.user ? setShowCampaignModal(true) : addToast("Sign in to use this feature.", "error")}
+            disabled={sessionStatus === "loading" || !session?.user}
+            title={session?.user ? "Add to campaign" : "Sign in to use this feature."}
             className="py-2 px-4 rounded-lg bg-surface-container-low text-white border border-white/10 hover:bg-white/5 font-bold text-xs font-label-caps tracking-wider transition-all duration-150 flex items-center gap-2"
           >
             <Target size={14} />
@@ -549,7 +571,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
             </button>
             <button
               onClick={handleSaveToDrive}
-              disabled={isSavingDrive}
+              disabled={isSavingDrive || sessionStatus === "loading" || !session?.user}
               className={`p-2 hover:bg-white/5 rounded transition-all flex items-center gap-1.5 text-xs font-bold border-l border-white/5 ml-1 pl-3 ${
                 isSavingDrive ? "opacity-50 cursor-not-allowed text-on-surface-variant" : "text-[#4285F4] hover:text-[#4285F4]"
               }`}
@@ -566,13 +588,13 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <ThreatIntelEvidence scan={scan} />
+      <ThreatIntelEvidence scan={scan} liveProviderCount={liveProviderCount} />
 
       {/* Analytics Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Cell 1: Risk Gauge + Breakdown */}
         <div className="md:col-span-1 glass-panel p-lg rounded-xl flex flex-col items-center justify-center gap-6 min-h-[300px]">
-          <RiskGauge score={scan.risk_score} feedCount={activeFeedCount} />
+          <RiskGauge score={scan.risk_score} feedCount={liveProviderCount} />
 
           {/* Risk Score Breakdown Bar */}
           <div className="w-full space-y-2.5 border-t border-white/5 pt-4">
@@ -623,7 +645,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 <h3 className="font-bold text-white text-md font-headline-sm">Gemini Analyst Brief</h3>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono-sm font-bold bg-primary/10 text-primary border border-primary/20">
-                AI Confidence: {ai.confidence || "HIGH"}
+                AI Confidence: {confidence}
               </span>
             </div>
             <div>

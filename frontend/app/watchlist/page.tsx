@@ -7,6 +7,7 @@ import RiskBadge from "@/components/RiskBadge";
 import { Eye, RefreshCw, Trash2, ArrowRight, Notebook, Download, Rss, Settings, X, Save, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { signIn, useSession } from "next-auth/react";
 
 // 14-day Heatmap generator
 const generateHeatmap = (items: any[]) => {
@@ -24,6 +25,7 @@ const generateHeatmap = (items: any[]) => {
 };
 
 export default function WatchlistPage() {
+  const { data: session, status: sessionStatus } = useSession();
   const [message, setMessage] = useState("");
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({ tags: "", notes: "", webhook_url: "", custom_threshold: 70, schedule_frequency: "daily" });
@@ -34,6 +36,7 @@ export default function WatchlistPage() {
     queryKey: ['watchlist'],
     queryFn: () => api.getWatchlist(),
     staleTime: 10000,
+    enabled: sessionStatus !== "loading" && Boolean(session?.user),
   });
 
   const removeMutation = useMutation({
@@ -85,7 +88,7 @@ export default function WatchlistPage() {
   const error = queryError ? "Failed to fetch watchlist registry." : scanMutation.isError ? "Scanner job failed." : "";
   const heatmapData = generateHeatmap(watchlist);
 
-  if (isLoading) {
+  if (sessionStatus === "loading" || (session?.user && isLoading)) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 py-8 animate-pulse px-4 md:px-8">
         <div className="h-14 bg-white/5 rounded-xl border border-white/5" />
@@ -94,6 +97,17 @@ export default function WatchlistPage() {
             <div key={i} className="h-44 bg-white/5 rounded-xl border border-white/5" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="max-w-xl mx-auto py-16 text-center px-4" role="status">
+        <span className="material-symbols-outlined text-[56px] text-primary mb-4">lock</span>
+        <h1 className="text-xl font-bold text-white mb-2">Login required.</h1>
+        <p className="text-on-surface-variant text-sm mb-6">Sign in to use this feature.</p>
+        <button onClick={() => signIn("google")} className="bg-primary text-on-primary py-2 px-6 rounded-lg text-sm font-bold">Sign in with Google</button>
       </div>
     );
   }

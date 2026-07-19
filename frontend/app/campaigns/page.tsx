@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Target, ChevronRight, X, Shield, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { signIn, useSession } from "next-auth/react";
 
 interface Campaign {
   id: string;
@@ -35,6 +36,7 @@ const RISK_COLORS: Record<string, string> = {
 };
 
 export default function CampaignsPage() {
+  const { data: session, status: sessionStatus } = useSession();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selected, setSelected] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,10 @@ export default function CampaignsPage() {
     }
   };
 
-  useEffect(() => { fetchCampaigns(); }, []);
+  useEffect(() => {
+    if (session?.user) fetchCampaigns();
+    else if (sessionStatus !== "loading") setLoading(false);
+  }, [session?.user, sessionStatus]);
 
   const handleSelectCampaign = async (id: string) => {
     setDetailLoading(true);
@@ -112,6 +117,21 @@ export default function CampaignsPage() {
     show: { opacity: 1, transition: { staggerChildren: 0.07 } }
   };
   const itemVariants = { hidden: { y: 16, opacity: 0 }, show: { y: 0, opacity: 1 } };
+
+  if (sessionStatus === "loading" || (session?.user && loading)) {
+    return <div className="max-w-xl mx-auto py-16 text-center text-on-surface-variant">Loading campaigns...</div>;
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="max-w-xl mx-auto py-16 text-center px-4" role="status">
+        <span className="material-symbols-outlined text-[56px] text-primary mb-4">lock</span>
+        <h1 className="text-xl font-bold text-white mb-2">Login required.</h1>
+        <p className="text-on-surface-variant text-sm mb-6">Sign in to use this feature.</p>
+        <button onClick={() => signIn("google")} className="bg-primary text-on-primary py-2 px-6 rounded-lg text-sm font-bold">Sign in with Google</button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 px-4 md:px-8 mt-6">

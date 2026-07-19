@@ -20,7 +20,7 @@ function isLive(feed: any): boolean {
   return !["fallback", "error", "unavailable"].includes(status);
 }
 
-export default function ThreatIntelEvidence({ scan }: { scan: ScanResponse }) {
+export default function ThreatIntelEvidence({ scan, liveProviderCount }: { scan: ScanResponse; liveProviderCount: number }) {
   const raw = scan.raw_data || {};
   const vt = raw.virustotal || {};
   const abuse = raw.abuseipdb || {};
@@ -113,7 +113,6 @@ export default function ThreatIntelEvidence({ scan }: { scan: ScanResponse }) {
     .filter(([, feed]) => !isLive(feed))
     .map(([name, feed]) => ({ name, status: sourceStatus(feed) || "not returned" }));
 
-  const liveCount = evidence.length;
   const threatSignals = evidence.filter((item) => item.status === "live").length;
 
   return (
@@ -128,7 +127,7 @@ export default function ThreatIntelEvidence({ scan }: { scan: ScanResponse }) {
         </div>
         <div className="flex gap-2 text-[10px] font-mono-sm">
           <span className="px-2 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-            {liveCount} live
+            {liveProviderCount} live
           </span>
           <span className="px-2 py-1 rounded border border-red-500/20 bg-red-500/10 text-red-300">
             {threatSignals} threat signal{threatSignals === 1 ? "" : "s"}

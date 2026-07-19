@@ -206,6 +206,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </span>
             </div>
             <button 
+              aria-label="Close sidebar"
               className="md:hidden text-on-surface-variant hover:text-white"
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -254,6 +255,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Footer/System Status */}
         <div className="mt-auto pt-md border-t border-white/5 space-y-2 relative">
           <button
+            aria-label="Toggle theme"
             onClick={toggleTheme}
             className="absolute -top-12 right-2 p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors border border-white/5"
             title="Toggle Theme"
@@ -292,6 +294,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 lg:px-lg shrink-0">
           <div className="flex items-center gap-2 text-xs font-semibold tracking-wider font-label-caps uppercase text-on-surface-variant">
             <button 
+              aria-label="Toggle sidebar"
               className="md:hidden mr-3 p-2 text-white hover:text-primary flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg transition-colors drop-shadow-md"
               onClick={() => setIsMobileMenuOpen(true)}
             >
@@ -331,6 +334,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {/* Profile Dropdown */}
             <div className="relative">
               <button
+                aria-label="Open user menu"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low border border-white/10 overflow-hidden hover:border-primary/50 transition-colors"
               >

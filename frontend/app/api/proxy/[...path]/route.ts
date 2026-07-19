@@ -14,9 +14,10 @@ async function proxy(request: NextRequest, context: { params: { path: string[] }
   const configuredBase = process.env.THREATMAP_BACKEND_URL;
   const isProduction = process.env.VERCEL_URL ? true : false;
   
-  // On Vercel, route to the local /api endpoint
-  // Otherwise, use configured URL or fallback to localhost
-  const backendBase = configuredBase || (isProduction ? "/api" : "http://127.0.0.1:8000");
+  // Server-side fetch requires an absolute URL. On Vercel, the incoming path
+  // already starts with api/v1, so use the deployment origin without adding a
+  // second /api prefix; vercel.json then rewrites /api/* to the Python function.
+  const backendBase = (configuredBase || (isProduction ? request.nextUrl.origin : "http://127.0.0.1:8000")).replace(/\/$/, "");
   
   const path = context.params.path.map(encodeURIComponent).join("/");
   const target = `${backendBase}/${path}${request.nextUrl.search}`;
@@ -49,4 +50,3 @@ export const POST = proxy;
 export const PUT = proxy;
 export const PATCH = proxy;
 export const DELETE = proxy;
-

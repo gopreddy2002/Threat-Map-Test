@@ -33,32 +33,41 @@ export default function Dashboard() {
     staleTime: 30000, // 30s cache
   });
 
-  const { data: activity, isLoading: activityLoading } = useQuery({
+  const { data: activity, error: activityError } = useQuery({
     queryKey: ['scanActivity'],
     queryFn: () => api.getScanActivity(),
     staleTime: 60000,
   });
 
-  const { data: topIocs, isLoading: topIocsLoading } = useQuery({
+  const { data: topIocs, error: topIocsError } = useQuery({
     queryKey: ['topIocs'],
     queryFn: () => api.getTopIocs(),
     staleTime: 60000,
   });
 
-  const { data: apiHealth, isLoading: apiHealthLoading } = useQuery({
+  const { data: apiHealth, error: apiHealthError } = useQuery({
     queryKey: ['apiHealth'],
     queryFn: () => api.getApiHealth(),
     staleTime: 60000,
   });
 
-  const { data: prediction, isLoading: predictionLoading } = useQuery({
+  const { data: prediction, error: predictionError } = useQuery({
     queryKey: ['attackPrediction'],
     queryFn: () => api.getAttackPrediction(),
     staleTime: 30000,
   });
 
-  const loading = statsLoading || activityLoading || topIocsLoading || apiHealthLoading || predictionLoading;
-  const error = statsError ? "Failed to fetch telemetry metrics from backend." : "";
+  const loading = statsLoading;
+  const error = statsError ? "Failed to fetch telemetry metrics from the dashboard API." : "";
+  const partialErrors = [activityError, topIocsError, apiHealthError, predictionError].filter(Boolean).length;
+
+  const refreshDashboard = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    queryClient.invalidateQueries({ queryKey: ['scanActivity'] });
+    queryClient.invalidateQueries({ queryKey: ['topIocs'] });
+    queryClient.invalidateQueries({ queryKey: ['apiHealth'] });
+    queryClient.invalidateQueries({ queryKey: ['attackPrediction'] });
+  };
 
   const dismissMutation = useMutation({
     mutationFn: (alertId: number) => api.dismissAlert(alertId),
@@ -93,7 +102,7 @@ export default function Dashboard() {
         <span className="material-symbols-outlined text-[64px] text-error mb-4 font-light">report_problem</span>
         <h2 className="text-xl font-bold text-white mb-2">Telemetry Offline</h2>
         <p className="text-on-surface-variant text-sm mb-6">{error || "Could not retrieve statistics."}</p>
-        <button onClick={() => queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })} className="bg-primary text-on-primary py-2 px-6 rounded-lg text-sm font-bold">
+        <button onClick={refreshDashboard} className="bg-primary text-on-primary py-2 px-6 rounded-lg text-sm font-bold">
           Retry Connection
         </button>
       </div>
@@ -118,13 +127,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-center mb-2">
         <h1 className="text-2xl font-black text-white font-headline-lg">Command Center</h1>
         <button 
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
-            queryClient.invalidateQueries({ queryKey: ['scanActivity'] });
-            queryClient.invalidateQueries({ queryKey: ['topIocs'] });
-            queryClient.invalidateQueries({ queryKey: ['apiHealth'] });
-            queryClient.invalidateQueries({ queryKey: ['attackPrediction'] });
-          }}
+          onClick={refreshDashboard}
           disabled={loading}
           className="bg-surface-container-low border border-white/10 hover:bg-white/5 text-white py-1.5 px-4 rounded-lg text-[11px] font-bold font-mono-sm flex items-center gap-2 transition-all disabled:opacity-50 hover:border-primary/50 hover:text-primary"
         >
@@ -132,6 +135,13 @@ export default function Dashboard() {
           REFRESH
         </button>
       </div>
+
+      {partialErrors > 0 && (
+        <div role="alert" className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 px-4 py-3 rounded-lg text-xs flex items-center justify-between gap-4">
+          <span>{partialErrors} dashboard section{partialErrors === 1 ? " is" : "s are"} temporarily unavailable. Available telemetry is shown below.</span>
+          <button onClick={refreshDashboard} className="font-bold hover:text-white">Retry</button>
+        </div>
+      )}
 
       {/* Live Threat Ticker (Top IOCs) */}
       {topIocs && topIocs.top_iocs && topIocs.top_iocs.length > 0 && (

@@ -1,10 +1,11 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/.next",
   "framework": "nextjs",
   "functions": {
     "api/index.py": {
-      "runtime": "python@3.12"
+      "maxDuration": 60
     }
   },
   "rewrites": [

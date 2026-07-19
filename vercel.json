@@ -13,6 +13,9 @@
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/api/v1/(.*)",
       "dest": "/backend/main.py"
     },
